@@ -1,137 +1,605 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
-    />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Video Downloader | Download Videos from Multiple Platforms</title>
+    <title>Video Downloader</title>
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap");
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      /* min-height: 100vh; */
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      margin-top: 20px;
+      font-size: 2vw;
+    }
+
+    .arham {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 40px;
+      /* margin-right: 250px; */
+    }
+
+    .arham i {
+      font-size: 24px;
+      color: rgb(68, 207, 68);
+    }
+
+    .arham h1 {
+      font-size: 24px;
+      color: gray;
+    }
+
+    .enargy {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 40px;
+    }
+
+    .enargy input {
+      padding: 12px 30px;
+      width: 100%;
+      max-width: 500px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      margin-bottom: 20px;
+    }
+
+    .icon-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .icon-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .icon-box i {
+      font-size: 28px;
+      margin-bottom: 5px;
+      color: #ff0000;
+    }
+
+    .icon-box .fa-facebook {
+      color: #1877f2;
+    }
+
+    .icon-box .fa-tiktok {
+      color: black;
+    }
+
+    .computer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 40px;
+    }
+
+    .computer button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 500px;
+      height: 50px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      
+    }
+
+    .computer button i {
+      font-size: 18px;
+    }
+
+    .computer button:hover {
+      background-color: #3e8e41;
+    }
+
+    .popup-card {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      width: 90%;
+      max-width: 600px;
+      position: relative;
+      z-index: 10;
+      margin-top: 50px;
+    }
+
+    @media (max-width: 768px) {
+      .container h1 {
+        font-size: 9.1vw;
+        margin-top: -10px;
+        /* text-align: center; */
+      }
+
+      .container p {
+        font-size: 4vw;
+
+        /* text-align: center; */
+      }
+
+      .popup-card {
+        padding: 30px 20px;
+        width: 95%;
+        margin-top: -5px;
+      }
+
+      .enargy input {
+        width: 100%;
+        font-size: 14px;
+      }
+
+      .computer button {
+        width: 100%;
+        font-size: 14px;
+        height: 45px;
+      }
+
+      .arham {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .arham h1 {
+        font-size: 20px;
+      }
+
+      .arham i {
+        font-size: 20px;
+      }
+
+      .icon-row {
+        gap: 15px;
+      }
+
+      .icon-box i {
+        font-size: 24px;
+      }
+
+      .icon-box span {
+        font-size: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .whatsapp-section {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+        padding: 15px;
+      }
+
+      .whatsapp-text h1 {
+        font-size: 20px;
+      }
+
+      .whatsapp-text h6 {
+        font-size: 13px;
+      }
+
+      .whatsapp-section i {
+        font-size: 40px;
+      }
+
+      .computer button {
+        height: 40px;
+      }
+
+      .enargy input {
+        padding: 10px 15px;
+      }
+
+      .icon-box i {
+        font-size: 22px;
+      }
+
+      .icon-box span {
+        font-size: 11px;
+      }
+      .row {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      /* .container {
+    padding: 20px;
+  } */
+      .notice-container {
+        top: 10%;
+        padding: 15px 20px;
+      }
+
+      .notice-text h2 {
+        font-size: 16px;
+      }
+
+      .notice-text p {
+        font-size: 13px;
+      }
+
+      .hy i {
+        font-size: 26px;
+      }
+    }
+
+    .container10 {
+      background: #fff;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      position: relative;
+      max-width: 600px;
+      width: 100%;
+      margin-top: 50px;
+    }
+
+    .taha {
+      /* margin-bottom: 30px; */
+      /* text-align: center; */
+      margin-right: 200px;
+    }
+
+    .haris {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      margin-top: 70px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .social-item {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+
+    .social-item i {
+      font-size: 30px;
+      width: 30px;
+      text-align: center;
+    }
+
+    .social-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .social-info h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .social-info p {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    /* Icon Colors */
+    .fa-instagram {
+      display: inline-block;
+      background: radial-gradient(
+        circle at 30% 107%,
+        #fdf497 0%,
+        #fd5949 45%,
+        #d6249f 60%,
+        #285aeb 90%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .fa-facebook-f {
+      color: #1877f2;
+    }
+
+    .fa-youtube {
+      color: #ff0000;
+    }
+
+    .fa-tiktok {
+      color: #000000;
+    }
+
+    /* Responsive */
+
+    .whatsapp-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      gap: 15px;
+      background: #198a19;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 608px;
+      margin: 30px auto;
+      position: relative;
+      color: white;
+    }
+
+    .whatsapp-section {
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .whatsapp-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 15px 20px;
+      border-radius: 12px;
+      max-width: 250px;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+
+    .whatsapp-icon {
+      font-size: 40px;
+      color: white;
+      margin-right: 15px;
+    }
+
+    .whatsapp-text h1 {
+      margin: 0;
+      color: white;
+      font-size: 20px;
+    }
+
+    .whatsapp-text h6 {
+      margin: 0;
+      color: #e0ffe0;
+      font-size: 12px;
+    }
+
+    .notice-container {
+      background: #fff;
+      padding: 10px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      position: relative;
+      max-width: 600px;
+      width: 100%;
+      margin: 30px auto;
+      position: relative;
+      margin-top: 4px;
+    }
+
+    .hy {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .hy i {
+      font-size: 30px;
+      color: #ffa500; /* Original orange/yellow warning color */
+      margin-top: 5px;
+    }
+
+    .notice-text h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #222;
+    }
+
+    .notice-text p {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    /* Responsive */
+
+    .container {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 2vw;
+    }
+
+    .popup-card {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      width: 90%;
+      max-width: 600px;
+      margin-top: 50px;
+    }
+
+    .arham {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 40px;
+    }
+
+    .arham i {
+      font-size: 24px;
+      color: rgb(68, 207, 68);
+    }
+
+    .arham h1 {
+      font-size: 24px;
+      color: gray;
+    }
+  </style>
   <body>
     <div class="container">
-      <div class="heading">
-        <h1>Video Downloader</h1>
-        <h5>Download videos from multiple platforms in high quality</h5>
+      <h1>Video Downloader</h1>
+      <p>Download videos from social media platforms</p>
+    </div>
+
+    <div class="popup-card">
+      <div class="arham">
+        <i class="fa-solid fa-download"></i>
+        <h1>Enter Video URL</h1>
       </div>
 
-      <div class="deo">
-        <div class="Download-section">
-          <div class="hero">
-            <h3><i class="fas fa-video"></i> Paste Video URL</h3>
-            <input
-              type="text"
-              class="hero-input"
-              placeholder="Paste TikTok, Instagram, YouTube, or Facebook URL here"
-            />
+      <div class="enargy">
+        <!-- FORM START -->
+        <form action="/download" method="POST">
+          <input
+            type="text"
+            name="video_url"
+            placeholder="Paste Video URL here..."
+            required
+          />
 
-            <div class="progress-container" id="progressContainer">
-              <div class="progress-bar" id="progressBar"></div>
+          <div class="icon-row">
+            <div class="icon-box">
+              <i class="fa-brands fa-instagram fa-4x"></i>
+              <span>Instagram</span>
             </div>
+            <div class="icon-box">
+              <i class="fa-brands fa-youtube"></i>
+              <span>YouTube</span>
+            </div>
+            <div class="icon-box">
+              <i class="fa-brands fa-facebook"></i>
+              <span>Facebook</span>
+            </div>
+            <div class="icon-box">
+              <i class="fa-brands fa-tiktok"></i>
+              <span>TikTok</span>
+            </div>
+          </div>
 
-            <button id="download-btn">
-              <i class="fas fa-download"></i> Download Video
+          <div class="computer">
+            <button type="submit">
+              <i class="fa-solid fa-download"></i>
+              Analyze & Download
             </button>
+          </div>
+        </form>
+        <!-- FORM END -->
+      </div>
+    </div>
 
-            <div class="download-info" id="downloadInfo">
-              <p id="downloadMessage"></p>
-              <a
-                href="#"
-                id="downloadLink"
-                class="download-link"
-                style="display: none"
-              >
-                <i class="fas fa-download"></i> Download File
-              </a>
+    <div class="container10">
+      <div class="taha">
+        <h1>Supported Platforms</h1>
+      </div>
+      <div class="haris">
+        <div class="row">
+          <div class="social-item">
+            <i class="fa-brands fa-instagram"></i>
+            <div class="social-info">
+              <h4>Instagram</h4>
+              <p>Posts, Stories</p>
             </div>
-
-            <div class="icon">
-              <div class="social">
-                <i class="fab fa-tiktok"></i>
-                <h4>TikTok</h4>
-              </div>
-              <div class="social">
-                <i class="fab fa-facebook"></i>
-                <h4>Facebook</h4>
-              </div>
-              <div class="social">
-                <i class="fab fa-youtube"></i>
-                <h4>YouTube</h4>
-              </div>
-              <div class="social">
-                <i class="fab fa-instagram"></i>
-                <h4>Instagram</h4>
-              </div>
+          </div>
+          <div class="social-item">
+            <i class="fa-brands fa-facebook-f"></i>
+            <div class="social-info">
+              <h4>Facebook</h4>
+              <p>Public Video</p>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="deo">
-        <div class="Download-section1">
-          <div class="enter">
-            <h1>How to Download Videos</h1>
-          </div>
-          <div class="her">
-            <div class="ico">
-              <i class="fab fa-tiktok"></i>
-              <div class="head">
-                <h4>TikTok Videos</h4>
-                <p>
-                  Copy the TikTok video link and paste it above to download.
-                </p>
-              </div>
-            </div>
-            <div class="ico">
-              <i class="fab fa-facebook"></i>
-              <div class="head">
-                <h4>Facebook Videos</h4>
-                <p>
-                  Copy the Facebook video URL and paste it in the input field.
-                </p>
-              </div>
-            </div>
-            <div class="ico">
-              <i class="fab fa-youtube"></i>
-              <div class="head">
-                <h4>YouTube Videos</h4>
-                <p>Simply paste the YouTube video link to download.</p>
-              </div>
-            </div>
-            <div class="ico">
-              <i class="fab fa-instagram"></i>
-              <div class="head">
-                <h4>Instagram Videos</h4>
-                <p>Copy Instagram video link and paste it to download.</p>
-              </div>
+        <div class="row">
+          <div class="social-item">
+            <i class="fa-brands fa-youtube"></i>
+            <div class="social-info">
+              <h4>YouTube</h4>
+              <p>Multiple qualities</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="deo">
-        <div class="notice-container">
-          <div class="not">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>
-              <strong>Important Notice:</strong> This service is for personal
-              use only. Please respect copyright laws and only download videos
-              that you have permission to use. We are not responsible for any
-              misuse of this service.
-            </p>
+          <div class="social-item">
+            <i class="fa-brands fa-tiktok"></i>
+            <div class="social-info">
+              <h4>TikTok</h4>
+              <p>No Watermark</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    <a href="index1.html" target="_blank" class="whatsapp-section">
+      <div class="whatsapp-box">
+        <i class="fa-brands fa-whatsapp whatsapp-icon"></i>
+        <div class="whatsapp-text">
+          <h1>Whatsapp</h1>
+          <h6>Status Saver</h6>
+        </div>
+      </div>
+    </a>
 
-    <div class="toast" id="toast"></div>
-    <script src="script.js"></script>
+    <div class="notice-container">
+      <div class="hy">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div class="notice-text">
+          <h2>Legal Notice:</h2>
+          <p>
+            This app uses sample videos for demonstration Real.<br />
+            video downloading may violate platform terms of service and
+            copyright <br />laws. Use responsibly.
+          </p>
+        </div>
+      </div>
+    </div>
+    <script src="scriprt.js"></script>
   </body>
 </html>
