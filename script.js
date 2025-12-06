@@ -1,7 +1,12 @@
 // Elements
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 const toast = document.getElementById("toast");
+const downloadInfo = document.getElementById("downloadInfo");
+const downloadMessage = document.getElementById("downloadMessage");
+const downloadLink = document.getElementById("downloadLink");
 
 // ✅ BACKEND URL
 const BACKEND_URL = "https://python22.pythonanywhere.com";
@@ -13,7 +18,18 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-// ✅ SIMPLE DOWNLOAD FUNCTION
+// Progress bar
+function showProgress(p) {
+    progressContainer.style.display = "block";
+    progressBar.style.width = p + "%";
+}
+
+function hideProgress() {
+    progressContainer.style.display = "none";
+    progressBar.style.width = "0%";
+}
+
+// ✅ WORKING DOWNLOAD FUNCTION
 function downloadVideo() {
     const url = input.value.trim();
     
@@ -44,20 +60,47 @@ function downloadVideo() {
         return;
     }
     
-    console.log("Starting download for:", url);
+    // Show progress
+    showProgress(30);
+    button.disabled = true;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
     
     // ✅ DIRECT DOWNLOAD LINK
     const downloadUrl = `${BACKEND_URL}/download?url=${encodeURIComponent(url)}`;
     
-    // Open in new tab
-    window.open(downloadUrl, '_blank');
+    console.log("Opening:", downloadUrl);
     
+    // Open in new tab
+    const newTab = window.open(downloadUrl, '_blank');
+    
+    // Update progress
+    showProgress(70);
     showToast("✅ Download started in new tab!", "success");
     
-    // Reset input after 2 seconds
+    // Complete progress
     setTimeout(() => {
-        input.value = "";
-        input.placeholder = "Paste another URL";
+        showProgress(100);
+        setTimeout(() => {
+            hideProgress();
+            
+            // Show download info
+            downloadMessage.textContent = "Download should start automatically. If not, check the new tab.";
+            downloadLink.href = downloadUrl;
+            downloadLink.textContent = "Click here if download doesn't start";
+            downloadLink.target = "_blank";
+            downloadInfo.style.display = "block";
+            
+            // Reset button
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+            
+            // Reset input
+            setTimeout(() => {
+                input.value = "";
+                input.placeholder = "Paste another URL";
+            }, 2000);
+            
+        }, 1000);
     }, 2000);
 }
 
@@ -67,7 +110,7 @@ window.addEventListener("load", () => {
     
     // Auto-load test URL
     input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    showToast("✅ Ready! Paste URL and click Download", "success");
+    showToast("✅ Ready! Click Download to start", "success");
     
     // Event listeners
     button.addEventListener("click", downloadVideo);
