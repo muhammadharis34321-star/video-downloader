@@ -8,10 +8,8 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// ✅ BACKEND URL - Tumhara PythonAnywhere
+// ✅ BACKEND URL
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-
-// ✅ NEW CORS PROXY (working)
 const CORS_PROXY = "https://corsproxy.io/?";
 
 let isDownloading = false;
@@ -34,51 +32,23 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// JavaScript code mein ye function update karo
+// ✅ SIMPLE BACKEND TEST - SIRF PROXY SE
 async function testBackend() {
     try {
-        console.log("Testing backend connection...");
+        console.log("🔄 Testing via proxy...");
         
-        // ✅ DIRECT call try (with credentials disable)
-        console.log("Trying direct call...");
-        try {
-            const response = await fetch(`${BACKEND_URL}/test`, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'application/json',
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log("✅ Backend direct connection:", data);
-                return true;
-            }
-        } catch (directError) {
-            console.log("Direct call failed:", directError);
-        }
-        
-        // ✅ Agar direct nahi chala, toh proxy se try karo
-        console.log("Trying via proxy...");
+        // ✅ SIRF PROXY USE KARO
         const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
-        const proxyResponse = await fetch(proxyUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-            }
-        });
+        const response = await fetch(proxyUrl);
         
-        if (proxyResponse.ok) {
-            const data = await proxyResponse.json();
-            console.log("✅ Backend via proxy:", data);
+        if (response.ok) {
+            const data = await response.json();
+            console.log("✅ Connected via proxy:", data);
             return true;
         }
-        
-        console.log("❌ Both methods failed");
         return false;
     } catch (error) {
-        console.error("Test error:", error);
+        console.error("Connection error:", error);
         return false;
     }
 }
@@ -103,7 +73,7 @@ function detectPlatform(url) {
     return 'Unknown';
 }
 
-// ✅ MAIN DOWNLOAD FUNCTION - WORKING
+// ✅ SIMPLE DOWNLOAD FUNCTION - SIRF PROXY SE
 async function downloadVideo() {
     if (isDownloading) {
         showToast("Please wait...", "error");
@@ -129,70 +99,39 @@ async function downloadVideo() {
     }
     
     isDownloading = true;
-    input.style.border = "2px solid #4CAF50";
     button.disabled = true;
     button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Downloading...`;
     showProgress(30);
     
     try {
-        console.log(`🎬 Downloading ${platform} video: ${url}`);
+        console.log(`🎬 Downloading ${platform} video...`);
         
-        // ✅ Try different methods
-        let response;
-        
-        try {
-            // Method 1: Direct call
-            console.log("Trying direct call...");
-            response = await fetch(`${BACKEND_URL}/download`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ url: url })
-            });
-        } catch (directError) {
-            console.log("Direct failed, trying proxy...");
-            
-            // Method 2: CORS proxy
-            const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
-            response = await fetch(proxyUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ url: url })
-            });
-        }
+        // ✅ HAMESHA PROXY USE KARO
+        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
+        const response = await fetch(proxyUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: url })
+        });
         
         showProgress(70);
         
-        // Get response text first
-        const responseText = await response.text();
-        console.log("Raw response:", responseText.substring(0, 200));
-        
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error("JSON parse error:", parseError);
-            throw new Error("Server returned invalid response");
-        }
-        
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
-        }
+        const data = await response.json();
+        console.log("Response:", data);
         
         if (data.success) {
             showProgress(100);
             
             setTimeout(() => {
                 hideProgress();
-                
-                // Success!
                 showToast(`✅ ${platform} video ready!`, "success");
                 
                 // Show download info
-                downloadMessage.textContent = `"${data.title}" ready to download`;
+                if (data.title) {
+                    downloadMessage.textContent = `"${data.title}" ready to download`;
+                }
                 
                 // Set download link
                 if (data.filename) {
@@ -201,16 +140,11 @@ async function downloadVideo() {
                     downloadLink.download = `${data.title || 'video'}.mp4`;
                     downloadLink.style.display = "inline-block";
                     downloadInfo.style.display = "block";
-                    
                     console.log("📥 Download URL:", downloadUrl);
                 }
                 
-                input.placeholder = "Ready! Paste another URL";
-                
-                // Auto reset
-                setTimeout(() => {
-                    if (isDownloading) resetForm();
-                }, 20000);
+                input.value = "";
+                input.placeholder = "Paste another URL";
                 
             }, 1000);
             
@@ -219,17 +153,16 @@ async function downloadVideo() {
         }
         
     } catch (error) {
-        console.error("❌ Download error:", error);
+        console.error("❌ Error:", error);
         hideProgress();
         showToast(`Error: ${error.message}`, "error");
         
-        // Reset form
-        setTimeout(() => {
-            resetForm();
-        }, 3000);
-        
     } finally {
-        isDownloading = false;
+        setTimeout(() => {
+            isDownloading = false;
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+        }, 2000);
     }
 }
 
@@ -237,13 +170,9 @@ async function downloadVideo() {
 function resetForm() {
     input.value = "";
     input.style.border = "2px solid #ddd";
-    input.style.color = "#333";
-    input.placeholder = "Paste video URL here";
     progressContainer.style.display = "none";
     downloadInfo.style.display = "none";
-    downloadLink.style.display = "none";
     button.disabled = false;
-    isDownloading = false;
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
 }
 
@@ -298,11 +227,3 @@ window.addEventListener("load", async () => {
         }
     });
 });
-
-// Debug functions
-window.testServer = testBackend;
-
-window.quickTest = function() {
-    input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    downloadVideo();
-};
