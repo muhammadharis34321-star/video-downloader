@@ -8,12 +8,11 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// Backend API URL - YAHAN APNA PYTHONANYWHERE URL DALNA HAI
-const API_BASE = "https://python22.pythonanywhere.com"; // Ye hai aapka backend URL
+// Backend API URL
+const API_BASE = "https://python22.pythonanywhere.com";
 
 // App state
 let isDownloading = false;
-let supportedPlatforms = ['YouTube', 'TikTok', 'Instagram', 'Facebook'];
 
 // Toast notification function
 function showToast(message, type = "success") {
@@ -22,7 +21,6 @@ function showToast(message, type = "success") {
     toast.classList.add(type);
     toast.classList.add("show");
     
-    // Auto hide after delay
     setTimeout(() => {
         toast.classList.remove("show");
     }, 3000);
@@ -52,7 +50,7 @@ function completeProgress() {
     }, 500);
 }
 
-// Reset form to initial state
+// Reset form
 function resetForm() {
     input.style.border = "2px solid #ddd";
     input.style.color = "#333";
@@ -62,12 +60,10 @@ function resetForm() {
     downloadLink.style.display = "none";
     button.disabled = false;
     isDownloading = false;
-    
-    // Update button text
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
 }
 
-// Validate URL format
+// Validate URL
 function isValidUrl(string) {
     try {
         const url = new URL(string);
@@ -77,320 +73,184 @@ function isValidUrl(string) {
     }
 }
 
-// Detect platform from URL with strict validation
-function detectPlatformFromUrl(url) {
-    const urlLower = url.toLowerCase();
-    
-    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
-        return 'YouTube';
-    } else if (urlLower.includes('tiktok.com') && urlLower.includes('/video/')) {
-        return 'TikTok';
-    } else if (urlLower.includes('instagram.com') && (urlLower.includes('/p/') || urlLower.includes('/reel/'))) {
-        return 'Instagram';
-    } else if (urlLower.includes('facebook.com') && urlLower.includes('/video/')) {
-        return 'Facebook';
-    } else {
-        return 'Unknown';
+// Test backend connection - IMPROVED VERSION
+async function checkBackend() {
+    try {
+        console.log("🔍 Testing backend connection...");
+        
+        const response = await fetch(`${API_BASE}/test`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        console.log("📡 Response status:", response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log("✅ Backend connected:", data);
+            return true;
+        } else {
+            console.log("❌ Response not OK:", response.status);
+            return false;
+        }
+    } catch (error) {
+        console.log("❌ Fetch error:", error.message);
+        return false;
     }
 }
 
-// Strict URL validation for supported platforms
-function isSupportedPlatformUrl(url) {
-    const platform = detectPlatformFromUrl(url);
-    
-    if (platform === 'Unknown') {
-        return {
-            valid: false,
-            message: "Invalid URL. Only YouTube, TikTok, Instagram, and Facebook video URLs are supported."
-        };
-    }
-    
-    // Additional checks for each platform
-    const urlLower = url.toLowerCase();
-    
-    if (platform === 'YouTube') {
-        if (!(urlLower.includes('watch?v=') || urlLower.includes('youtu.be/'))) {
-            return {
-                valid: false,
-                message: "Invalid YouTube URL. Must be a video link."
-            };
+// Quick test endpoint
+async function quickTest() {
+    try {
+        // Try multiple endpoints
+        const endpoints = ['/test', '/status', '/'];
+        
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(API_BASE + endpoint, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                console.log(`Endpoint ${endpoint}: ${response.status}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("✅ Quick test passed:", data);
+                    return true;
+                }
+            } catch (e) {
+                console.log(`Endpoint ${endpoint} failed:`, e.message);
+            }
         }
+        return false;
+    } catch (error) {
+        console.log("Quick test failed:", error);
+        return false;
     }
-    
-    if (platform === 'TikTok') {
-        if (!urlLower.includes('/video/')) {
-            return {
-                valid: false,
-                message: "Invalid TikTok URL. Must be a video link."
-            };
-        }
-    }
-    
-    if (platform === 'Instagram') {
-        if (!(urlLower.includes('/p/') || urlLower.includes('/reel/'))) {
-            return {
-                valid: false,
-                message: "Invalid Instagram URL. Must be a post or reel link."
-            };
-        }
-    }
-    
-    if (platform === 'Facebook') {
-        if (!urlLower.includes('/video/')) {
-            return {
-                valid: false,
-                message: "Invalid Facebook URL. Must be a video link."
-            };
-        }
-    }
-    
-    return {
-        valid: true,
-        platform: platform
-    };
 }
 
-// Main download function
+// Simple download function for testing
 async function downloadVideo() {
-    // Prevent multiple downloads
     if (isDownloading) {
-        showToast("Please wait, current download in progress...", "error");
+        showToast("Please wait...", "error");
         return;
     }
     
     const url = input.value.trim();
     
-    // Empty URL check
     if (!url) {
-        showToast("Please paste a video URL first", "error");
-        input.focus();
+        showToast("Please enter a URL", "error");
         return;
     }
     
-    // Basic URL format check
     if (!isValidUrl(url)) {
-        showToast("Please enter a valid URL starting with http:// or https://", "error");
-        input.style.border = "2px solid #f44336";
+        showToast("Invalid URL format", "error");
         return;
     }
     
-    // Strict platform validation
-    const validation = isSupportedPlatformUrl(url);
-    if (!validation.valid) {
-        showToast(validation.message, "error");
-        input.style.border = "2px solid #f44336";
-        return;
-    }
-    
-    // Start download process
     isDownloading = true;
-    const platform = validation.platform;
-    
-    // Update UI
-    input.style.border = "2px solid #4CAF50";
-    input.style.color = "#4CAF50";
-    input.placeholder = `Downloading ${platform} video...`;
     button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing ${platform}...`;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
-    // Show progress
     animateProgress();
     
     try {
-        console.log(`🚀 Starting download: ${url}`);
-        console.log(`📱 Platform: ${platform}`);
-        console.log(`🔗 Backend: ${API_BASE}/download`);
+        console.log("Sending request to backend...");
         
-        // Send request to backend
         const response = await fetch(`${API_BASE}/download`, {
-            method: "POST",
+            method: 'POST',
+            mode: 'cors',
             headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ url: url })
         });
         
         completeProgress();
         
-        if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("📦 Response:", data);
-        
-        if (data.success) {
-            showToast(`✅ ${platform} video downloaded successfully!`, "success");
+        if (response.ok) {
+            const data = await response.json();
+            console.log("Response:", data);
             
-            // Show download info
-            const title = data.title || 'Video';
-            downloadMessage.textContent = `"${title}" ready to download`;
-            
-            // Set download link - CORRECTED URL
-            downloadLink.href = `${API_BASE}/get_file/${encodeURIComponent(data.filename)}`;
-            downloadLink.style.display = "inline-block";
-            downloadLink.setAttribute('download', data.filename);
-            downloadLink.setAttribute('target', '_blank');
-            downloadInfo.style.display = "block";
-            
-            input.placeholder = "Download ready! Paste another URL";
-            
-            // Auto reset after 15 seconds
-            setTimeout(() => {
-                if (isDownloading) {
+            if (data.success) {
+                showToast("✅ Download successful!", "success");
+                
+                // Show download link for testing
+                downloadMessage.textContent = data.message || "Video ready";
+                downloadInfo.style.display = "block";
+                
+                // Auto reset
+                setTimeout(() => {
                     resetForm();
-                }
-            }, 15000);
-            
+                }, 5000);
+            } else {
+                showToast(data.error || "Download failed", "error");
+                setTimeout(resetForm, 3000);
+            }
         } else {
-            throw new Error(data.error || "Download failed");
+            throw new Error(`Server error: ${response.status}`);
         }
         
     } catch (error) {
-        console.error("❌ Download error:", error);
+        console.error("Error:", error);
         completeProgress();
-        
-        let errorMessage = "Download failed. ";
-        
-        if (error.message.includes("Failed to fetch")) {
-            errorMessage += "Cannot connect to server. Check your internet or backend URL.";
-        } else if (error.message.includes("404")) {
-            errorMessage += "Server endpoint not found. Check backend configuration.";
-        } else if (error.message.includes("500")) {
-            errorMessage += "Server error. Please try again.";
-        } else if (error.message.includes("Unsupported platform")) {
-            errorMessage += "Platform not supported. Use YouTube, TikTok, Instagram or Facebook.";
-        } else {
-            errorMessage += error.message;
-        }
-        
-        showToast(errorMessage, "error");
-        input.placeholder = "Download failed. Try again.";
-        input.style.border = "2px solid #f44336";
-        
-        // Reset after 5 seconds
-        setTimeout(() => {
-            resetForm();
-        }, 5000);
-        
+        showToast("Connection error. Try again.", "error");
+        setTimeout(resetForm, 3000);
     } finally {
         isDownloading = false;
     }
 }
 
-// Real-time input validation
-function validateInput() {
-    const url = input.value.trim();
-    
-    if (!url) {
-        input.style.border = "2px solid #ddd";
-        input.style.color = "#333";
-        button.disabled = false;
-        return;
-    }
-    
-    if (!isValidUrl(url)) {
-        input.style.border = "2px solid #ff9800";
-        input.style.color = "#ff9800";
-        button.disabled = false;
-        return;
-    }
-    
-    const validation = isSupportedPlatformUrl(url);
-    if (validation.valid) {
-        input.style.border = "2px solid #4CAF50";
-        input.style.color = "#4CAF50";
-        button.disabled = false;
-    } else {
-        input.style.border = "2px solid #f44336";
-        input.style.color = "#f44336";
-        button.disabled = false;
-    }
-}
-
-// Test backend connection
-async function checkBackend() {
-    try {
-        const response = await fetch(`${API_BASE}/test`, {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log("✅ Backend connected:", data);
-            showToast("Connected to server", "success");
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.log("❌ Backend not reachable");
-        return false;
-    }
-}
-
-// Event Listeners
-button.addEventListener("click", downloadVideo);
-
-input.addEventListener("input", validateInput);
-
-input.addEventListener("focus", () => {
-    if (input.style.border !== "2px solid #f44336") {
-        input.style.border = "2px solid #4CAF50";
-    }
-});
-
-input.addEventListener("blur", () => {
-    validateInput();
-});
-
-// Enter key support
-input.addEventListener("keypress", (e) => {
-    if (e.key === "Enter" && !isDownloading) {
-        downloadVideo();
-    }
-});
-
-// Download link click event
-downloadLink.addEventListener("click", (e) => {
-    showToast("Starting download...", "success");
-    // Reset form after click
-    setTimeout(() => {
-        resetForm();
-    }, 2000);
-});
-
-// Initialize on page load
+// Initialize
 window.addEventListener("load", async () => {
-    console.log("🚀 Video Downloader initialized");
-    console.log(`📡 Backend URL: ${API_BASE}`);
+    console.log("🚀 Video Downloader Initializing...");
+    console.log("📡 Backend:", API_BASE);
+    console.log("🌐 Frontend:", window.location.origin);
     
-    // Check backend
+    // Show loading
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+    button.disabled = true;
+    
+    // Test backend
     const isConnected = await checkBackend();
     
     if (isConnected) {
         button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+        button.disabled = false;
         input.placeholder = "Paste video URL and click Download";
         console.log("✅ System ready");
+        showToast("Connected to server", "success");
     } else {
         button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Server Offline';
-        button.disabled = true;
-        input.placeholder = "Server offline. Please check backend.";
-        input.style.border = "2px solid #f44336";
-        showToast("Backend server is offline", "error");
-        console.log("❌ Server offline");
+        input.placeholder = "Backend connection failed";
+        console.log("❌ Backend offline");
+        
+        // Try quick test
+        const quickResult = await quickTest();
+        if (quickResult) {
+            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+            button.disabled = false;
+            showToast("Backend connected!", "success");
+        }
     }
+    
+    // Set up event listeners
+    button.addEventListener("click", downloadVideo);
+    
+    input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !isDownloading && !button.disabled) {
+            downloadVideo();
+        }
+    });
 });
 
-// Online/offline detection
-window.addEventListener('online', () => {
-    console.log("🌐 Online: Internet connection restored");
-    checkBackend();
-});
-
-window.addEventListener('offline', () => {
-    console.log("🌐 Offline: No internet connection");
-    showToast("Internet connection lost", "error");
-    button.disabled = true;
-});
+// Manual test function (for console testing)
+window.testBackend = async function() {
+    console.log("🧪 Testing backend manually...");
+    const result = await checkBackend();
+    console.log("Result:", result ? "✅ Connected" : "❌ Failed");
+    return result;
+};
