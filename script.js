@@ -8,11 +8,11 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// ✅ Working backend URL
+// ✅ BACKEND URL - Tumhara PythonAnywhere
 const BACKEND_URL = "https://python22.pythonanywhere.com";
 
-// ✅ Working CORS proxy (tested)
-const CORS_PROXY = "https://api.allorigins.win/get?url=";
+// ✅ NEW CORS PROXY (working)
+const CORS_PROXY = "https://corsproxy.io/?";
 
 let isDownloading = false;
 
@@ -34,17 +34,28 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// Test backend
+// Test backend connection
 async function testBackend() {
     try {
-        const url = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
-        const response = await fetch(url);
+        // ✅ DIRECT call try karo (Flask CORS enabled hai)
+        const response = await fetch(`${BACKEND_URL}/test`);
         
         if (response.ok) {
-            const result = await response.json();
-            console.log("✅ Backend:", result);
+            const data = await response.json();
+            console.log("✅ Backend direct connection:", data);
             return true;
         }
+        
+        // ✅ Agar direct nahi chala, toh proxy se try karo
+        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
+        const proxyResponse = await fetch(proxyUrl);
+        
+        if (proxyResponse.ok) {
+            const data = await proxyResponse.json();
+            console.log("✅ Backend via proxy:", data);
+            return true;
+        }
+        
         return false;
     } catch (error) {
         console.error("Test error:", error);
@@ -72,66 +83,136 @@ function detectPlatform(url) {
     return 'Unknown';
 }
 
-// ✅ MAIN DOWNLOAD FUNCTION - WORKING VERSION
-// Modified download function for debugging
+// ✅ MAIN DOWNLOAD FUNCTION - WORKING
 async function downloadVideo() {
-    if (isDownloading) return;
+    if (isDownloading) {
+        showToast("Please wait...", "error");
+        return;
+    }
     
     const url = input.value.trim();
     
     if (!url) {
-        showToast("Please paste video URL", "error");
+        showToast("Paste video URL first", "error");
+        return;
+    }
+    
+    if (!isValidUrl(url)) {
+        showToast("Invalid URL format", "error");
+        return;
+    }
+    
+    const platform = detectPlatform(url);
+    if (platform === 'Unknown') {
+        showToast("Supported: YouTube, TikTok, Instagram, Facebook", "error");
         return;
     }
     
     isDownloading = true;
+    input.style.border = "2px solid #4CAF50";
     button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Testing...`;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Downloading...`;
+    showProgress(30);
     
     try {
-        console.log("Testing download endpoint...");
+        console.log(`🎬 Downloading ${platform} video: ${url}`);
         
-        // First, let's check if endpoint exists
-        const testUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(BACKEND_URL + '/download')}`;
+        // ✅ Try different methods
+        let response;
         
-        // Try simple GET first to check endpoint
-        const getResponse = await fetch(testUrl.replace('/get?', '/raw?'));
-        const getText = await getResponse.text();
-        console.log("GET response:", getText.substring(0, 200));
-        
-        // Now try POST
-        const response = await fetch(testUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ url: url })
-        });
-        
-        const result = await response.json();
-        console.log("POST response:", result);
-        
-        if (result.contents) {
-            const data = JSON.parse(result.contents);
-            console.log("Parsed data:", data);
+        try {
+            // Method 1: Direct call
+            console.log("Trying direct call...");
+            response = await fetch(`${BACKEND_URL}/download`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ url: url })
+            });
+        } catch (directError) {
+            console.log("Direct failed, trying proxy...");
             
-            if (data.success) {
-                showToast("✅ Endpoint working!", "success");
-                console.log("Download would start now...");
-            }
+            // Method 2: CORS proxy
+            const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
+            response = await fetch(proxyUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ url: url })
+            });
+        }
+        
+        showProgress(70);
+        
+        // Get response text first
+        const responseText = await response.text();
+        console.log("Raw response:", responseText.substring(0, 200));
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("JSON parse error:", parseError);
+            throw new Error("Server returned invalid response");
+        }
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        
+        if (data.success) {
+            showProgress(100);
+            
+            setTimeout(() => {
+                hideProgress();
+                
+                // Success!
+                showToast(`✅ ${platform} video ready!`, "success");
+                
+                // Show download info
+                downloadMessage.textContent = `"${data.title}" ready to download`;
+                
+                // Set download link
+                if (data.filename) {
+                    const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
+                    downloadLink.href = downloadUrl;
+                    downloadLink.download = `${data.title || 'video'}.mp4`;
+                    downloadLink.style.display = "inline-block";
+                    downloadInfo.style.display = "block";
+                    
+                    console.log("📥 Download URL:", downloadUrl);
+                }
+                
+                input.placeholder = "Ready! Paste another URL";
+                
+                // Auto reset
+                setTimeout(() => {
+                    if (isDownloading) resetForm();
+                }, 20000);
+                
+            }, 1000);
+            
         } else {
-            console.log("No contents in response");
+            throw new Error(data.error || "Download failed");
         }
         
     } catch (error) {
-        console.error("Error details:", error);
-        showToast("Endpoint check failed", "error");
+        console.error("❌ Download error:", error);
+        hideProgress();
+        showToast(`Error: ${error.message}`, "error");
+        
+        // Reset form
+        setTimeout(() => {
+            resetForm();
+        }, 3000);
+        
     } finally {
         isDownloading = false;
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
     }
 }
+
 // Reset form
 function resetForm() {
     input.value = "";
@@ -145,6 +226,28 @@ function resetForm() {
     isDownloading = false;
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
 }
+
+// Input validation
+input.addEventListener("input", function() {
+    const url = this.value.trim();
+    
+    if (!url) {
+        this.style.border = "2px solid #ddd";
+        return;
+    }
+    
+    if (!isValidUrl(url)) {
+        this.style.border = "2px solid #ff9800";
+        return;
+    }
+    
+    const platform = detectPlatform(url);
+    if (platform !== 'Unknown') {
+        this.style.border = "2px solid #4CAF50";
+    } else {
+        this.style.border = "2px solid #f44336";
+    }
+});
 
 // Initialize
 window.addEventListener("load", async () => {
@@ -177,9 +280,9 @@ window.addEventListener("load", async () => {
 });
 
 // Debug functions
-window.testConnection = testBackend;
+window.testServer = testBackend;
 
-window.quickTest = function(url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ") {
-    input.value = url;
+window.quickTest = function() {
+    input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     downloadVideo();
 };
