@@ -9,7 +9,7 @@ const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
 // URLs - CHANGE THIS TO YOUR PYTHONANYWHERE URL
-const BACKEND_URL = "https://yourusername.pythonanywhere.com";  // 🔴 YAHAN APNA URL DALO
+const BACKEND_URL = "https://python22.pythonanywhere.com";
 const CORS_PROXY = "https://corsproxy.io/?";  // ✅ Naya CORS proxy
 
 let isDownloading = false;
