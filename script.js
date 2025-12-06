@@ -8,9 +8,8 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// ✅ BACKEND URL
+// ✅ BACKEND URL - DIRECT USE KARO
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-const CORS_PROXY = "https://corsproxy.io/?";
 
 let isDownloading = false;
 
@@ -32,17 +31,16 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// ✅ Test backend - ALWAYS USE PROXY
+// ✅ Test backend - DIRECT CALL
 async function testBackend() {
     try {
-        console.log("🔗 Testing connection...");
+        console.log("🔗 Testing direct connection...");
         
-        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
-        const response = await fetch(proxyUrl);
+        const response = await fetch(`${BACKEND_URL}/test`);
         
         if (response.ok) {
             const data = await response.json();
-            console.log("✅ Connected:", data);
+            console.log("✅ Direct connection:", data);
             return true;
         }
         return false;
@@ -72,19 +70,15 @@ function detectPlatform(url) {
     return 'Unknown';
 }
 
-// ✅ DIFFERENT CORS PROXIES TRY KARO
-const CORS_PROXIES = [
-    "https://api.allorigins.win/raw?url=",
-    "https://corsproxy.io/?", 
-    "https://proxy.cors.sh/",
-    "https://cors-anywhere.herokuapp.com/"
-];
-
-// ✅ MODIFIED downloadVideo function
+// ✅ SIMPLE DOWNLOAD FUNCTION - DIRECT FETCH
 async function downloadVideo() {
-    if (isDownloading) return;
+    if (isDownloading) {
+        showToast("Please wait...", "error");
+        return;
+    }
     
     const url = input.value.trim();
+    
     if (!url) {
         showToast("Paste video URL first", "error");
         return;
@@ -103,47 +97,31 @@ async function downloadVideo() {
     
     isDownloading = true;
     button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Downloading...`;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
     showProgress(30);
     
     try {
-        console.log(`🎬 Downloading ${platform} video...`);
+        console.log(`🎬 Starting download for: ${url}`);
         
-        // ✅ Try different proxies
-        let response, error;
-        
-        for (const proxy of CORS_PROXIES) {
-            try {
-                const proxyUrl = proxy === "https://proxy.cors.sh/" 
-                    ? `https://proxy.cors.sh/${BACKEND_URL}/download`
-                    : `${proxy}${encodeURIComponent(BACKEND_URL + '/download')}`;
-                
-                console.log(`Trying proxy: ${proxy}`);
-                
-                response = await fetch(proxyUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(proxy === "https://proxy.cors.sh/" && {
-                            "x-cors-api-key": "temp_09a95c0c57d3c78c0c93c0c4a1c4b1c0"
-                        })
-                    },
-                    body: JSON.stringify({ url: url })
-                });
-                
-                if (response.ok) break;
-                
-            } catch (err) {
-                error = err;
-                console.log(`Proxy failed: ${proxy}`);
-            }
-        }
-        
-        if (!response || !response.ok) {
-            throw new Error("All proxies failed");
-        }
+        // ✅ DIRECT FETCH WITHOUT PROXY
+        const response = await fetch(`${BACKEND_URL}/download`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ url: url })
+        });
         
         showProgress(70);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error("Non-JSON response:", text.substring(0, 200));
+            throw new Error("Server returned non-JSON response");
+        }
         
         const data = await response.json();
         console.log("✅ Server response:", data);
@@ -155,25 +133,26 @@ async function downloadVideo() {
                 hideProgress();
                 showToast(`✅ ${platform} video ready!`, "success");
                 
-                if (data.title) {
-                    downloadMessage.textContent = `"${data.title}" ready to download`;
-                }
+                // Show download info
+                downloadMessage.textContent = `"${data.title || 'Video'}" ready to download`;
                 
+                // Set download link
                 if (data.filename) {
-                    // ✅ Direct download link (no proxy needed for GET)
                     const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
                     downloadLink.href = downloadUrl;
                     downloadLink.download = `${data.title || 'video'}.mp4`;
                     downloadLink.style.display = "inline-block";
                     downloadInfo.style.display = "block";
                     
-                    // Auto click
+                    // Auto click after 2 seconds
                     setTimeout(() => {
                         downloadLink.click();
-                    }, 1500);
+                    }, 2000);
                 }
                 
+                // Reset input
                 input.value = "";
+                input.placeholder = "Paste another URL";
                 
             }, 1000);
             
@@ -186,6 +165,15 @@ async function downloadVideo() {
         hideProgress();
         showToast(`Error: ${error.message}`, "error");
         
+        // Alternative method try karo
+        setTimeout(() => {
+            showToast("Trying alternative method...", "info");
+            
+            // Open backend in new tab
+            const backendUrl = `${BACKEND_URL}/download_manual?url=${encodeURIComponent(input.value)}`;
+            window.open(backendUrl, '_blank');
+        }, 2000);
+        
     } finally {
         setTimeout(() => {
             isDownloading = false;
@@ -194,6 +182,7 @@ async function downloadVideo() {
         }, 2000);
     }
 }
+
 // Reset form
 function resetForm() {
     input.value = "";
@@ -240,6 +229,16 @@ window.addEventListener("load", async () => {
         button.disabled = false;
         input.placeholder = "Paste YouTube/TikTok/Instagram/Facebook URL";
         showToast("✅ Connected to server", "success");
+        
+        // Auto-test with sample URL
+        setTimeout(() => {
+            if (input.value === "") {
+                input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+                input.style.border = "2px solid #4CAF50";
+                showToast("Sample URL loaded - Click Download to test", "info");
+            }
+        }, 1000);
+        
     } else {
         button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Server Offline';
         input.placeholder = "Server connection failed";
@@ -260,4 +259,12 @@ window.addEventListener("load", async () => {
 window.quickTest = function() {
     input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     downloadVideo();
+};
+
+// Manual download function
+window.manualDownload = function() {
+    const url = input.value.trim();
+    if (url) {
+        window.open(`${BACKEND_URL}/download?url=${encodeURIComponent(url)}`, '_blank');
+    }
 };
