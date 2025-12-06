@@ -73,6 +73,7 @@ function detectPlatform(url) {
 }
 
 // ✅ MAIN DOWNLOAD FUNCTION - WORKING VERSION
+// Modified download function for debugging
 async function downloadVideo() {
     if (isDownloading) return;
     
@@ -83,30 +84,23 @@ async function downloadVideo() {
         return;
     }
     
-    if (!isValidUrl(url)) {
-        showToast("Enter valid URL (with http://)", "error");
-        return;
-    }
-    
-    const platform = detectPlatform(url);
-    if (platform === 'Unknown') {
-        showToast("Supported: YouTube, TikTok, Instagram, Facebook", "error");
-        return;
-    }
-    
     isDownloading = true;
-    input.style.border = "2px solid #4CAF50";
     button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
-    showProgress(30);
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Testing...`;
     
     try {
-        console.log(`Downloading: ${url}`);
+        console.log("Testing download endpoint...");
         
-        // ✅ Using AllOrigins proxy correctly
-        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
+        // First, let's check if endpoint exists
+        const testUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(BACKEND_URL + '/download')}`;
         
-        const response = await fetch(proxyUrl, {
+        // Try simple GET first to check endpoint
+        const getResponse = await fetch(testUrl.replace('/get?', '/raw?'));
+        const getText = await getResponse.text();
+        console.log("GET response:", getText.substring(0, 200));
+        
+        // Now try POST
+        const response = await fetch(testUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -114,53 +108,30 @@ async function downloadVideo() {
             body: JSON.stringify({ url: url })
         });
         
-        showProgress(70);
-        
-        // Parse response
         const result = await response.json();
+        console.log("POST response:", result);
         
-        // AllOrigins returns {contents: "", status: {}}
         if (result.contents) {
             const data = JSON.parse(result.contents);
+            console.log("Parsed data:", data);
             
             if (data.success) {
-                showProgress(100);
-                
-                showToast(`✅ ${platform} video ready!`, "success");
-                
-                // Show download link
-                downloadMessage.textContent = `"${data.title}" ready`;
-                
-                // Set download link
-                if (data.filename) {
-                    downloadLink.href = `${BACKEND_URL}/get_file/${data.filename}`;
-                    downloadLink.download = data.title ? `${data.title}.mp4` : "video.mp4";
-                    downloadLink.style.display = "inline-block";
-                    downloadInfo.style.display = "block";
-                }
-                
-                input.placeholder = "Ready! Paste another URL";
-                
-                setTimeout(() => hideProgress(), 1000);
-                setTimeout(() => resetForm(), 15000);
-                
-            } else {
-                throw new Error(data.error || "Download failed");
+                showToast("✅ Endpoint working!", "success");
+                console.log("Download would start now...");
             }
         } else {
-            throw new Error("No response from server");
+            console.log("No contents in response");
         }
         
     } catch (error) {
-        console.error("Download error:", error);
-        hideProgress();
-        showToast(`Error: ${error.message}`, "error");
-        setTimeout(resetForm, 3000);
+        console.error("Error details:", error);
+        showToast("Endpoint check failed", "error");
     } finally {
         isDownloading = false;
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
     }
 }
-
 // Reset form
 function resetForm() {
     input.value = "";
