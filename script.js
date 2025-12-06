@@ -405,6 +405,137 @@ function validateInput() {
     }
 }
 
+
+
+// Main download function - SIMPLIFIED VERSION
+async function downloadVideo() {
+    if (isDownloading) {
+        showToast("Please wait, download in progress...", "error");
+        return;
+    }
+    
+    const url = input.value.trim();
+    
+    // Empty URL check
+    if (!url) {
+        showToast("Please paste a video URL first", "error");
+        input.focus();
+        return;
+    }
+    
+    // URL format check
+    if (!isValidUrl(url)) {
+        showToast("Please enter a valid URL (include http:// or https://)", "error");
+        input.style.border = "2px solid #f44336";
+        return;
+    }
+    
+    // Platform check
+    const platform = detectPlatform(url);
+    if (platform === 'Unknown') {
+        showToast("Only YouTube, TikTok, Instagram, and Facebook are supported", "error");
+        input.style.border = "2px solid #f44336";
+        return;
+    }
+    
+    // Start download process
+    isDownloading = true;
+    
+    // Update UI
+    input.style.border = "2px solid #4CAF50";
+    input.style.color = "#4CAF50";
+    input.placeholder = `Downloading ${platform} video...`;
+    button.disabled = true;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing ${platform}...`;
+    
+    // Show progress
+    showProgress(10);
+    
+    try {
+        console.log(`🚀 Starting download: ${url}`);
+        console.log(`📱 Platform: ${platform}`);
+        
+        // ✅ DIRECT download request (info call hata do)
+        showProgress(50);
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(BACKEND_URL + '/download')}`;
+        
+        const downloadResponse = await fetch(proxyUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ 
+                url: url
+                // format parameter hata do
+            })
+        });
+        
+        showProgress(80);
+        
+        if (!downloadResponse.ok) {
+            throw new Error(`Server error: ${downloadResponse.status}`);
+        }
+        
+        const downloadData = await downloadResponse.json();
+        console.log("📦 Response:", downloadData);
+        
+        if (downloadData.success) {
+            showProgress(100);
+            setTimeout(() => {
+                hideProgress();
+                
+                showToast(`✅ ${platform} video downloaded successfully!`, "success");
+                
+                // Show download info
+                const title = downloadData.title || 'Video';
+                downloadMessage.textContent = `"${title}" ready to download`;
+                
+                // Create download link
+                if (downloadData.download_url) {
+                    downloadLink.href = downloadData.download_url;
+                } else if (downloadData.filename) {
+                    downloadLink.href = `${BACKEND_URL}/get_file/${downloadData.filename}`;
+                }
+                
+                downloadLink.style.display = "inline-block";
+                downloadLink.download = `${title.replace(/[^a-z0-9]/gi, '_')}.mp4`;
+                downloadLink.target = "_blank";
+                downloadInfo.style.display = "block";
+                
+                input.placeholder = "Download ready! Paste another URL";
+                
+                // Auto reset after 15 seconds
+                setTimeout(() => {
+                    if (isDownloading) {
+                        resetForm();
+                    }
+                }, 15000);
+                
+            }, 1000);
+        } else {
+            throw new Error(downloadData.error || "Download failed");
+        }
+        
+    } catch (error) {
+        console.error("❌ Download error:", error);
+        hideProgress();
+        
+        let errorMessage = "Download failed. ";
+        errorMessage += error.message;
+        
+        showToast(errorMessage, "error");
+        input.placeholder = "Download failed. Try again.";
+        input.style.border = "2px solid #f44336";
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+            resetForm();
+        }, 3000);
+        
+    } finally {
+        isDownloading = false;
+    }
+}
 // Initialize on page load
 window.addEventListener("load", async () => {
     console.log("🚀 Video Downloader Initializing...");
