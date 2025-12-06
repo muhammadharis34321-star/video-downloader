@@ -72,15 +72,19 @@ function detectPlatform(url) {
     return 'Unknown';
 }
 
-// ✅ MAIN DOWNLOAD FUNCTION
+// ✅ DIFFERENT CORS PROXIES TRY KARO
+const CORS_PROXIES = [
+    "https://api.allorigins.win/raw?url=",
+    "https://corsproxy.io/?", 
+    "https://proxy.cors.sh/",
+    "https://cors-anywhere.herokuapp.com/"
+];
+
+// ✅ MODIFIED downloadVideo function
 async function downloadVideo() {
-    if (isDownloading) {
-        showToast("Please wait...", "error");
-        return;
-    }
+    if (isDownloading) return;
     
     const url = input.value.trim();
-    
     if (!url) {
         showToast("Paste video URL first", "error");
         return;
@@ -105,20 +109,44 @@ async function downloadVideo() {
     try {
         console.log(`🎬 Downloading ${platform} video...`);
         
-        // ✅ ALWAYS USE PROXY
-        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
-        const response = await fetch(proxyUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ url: url })
-        });
+        // ✅ Try different proxies
+        let response, error;
+        
+        for (const proxy of CORS_PROXIES) {
+            try {
+                const proxyUrl = proxy === "https://proxy.cors.sh/" 
+                    ? `https://proxy.cors.sh/${BACKEND_URL}/download`
+                    : `${proxy}${encodeURIComponent(BACKEND_URL + '/download')}`;
+                
+                console.log(`Trying proxy: ${proxy}`);
+                
+                response = await fetch(proxyUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(proxy === "https://proxy.cors.sh/" && {
+                            "x-cors-api-key": "temp_09a95c0c57d3c78c0c93c0c4a1c4b1c0"
+                        })
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                if (response.ok) break;
+                
+            } catch (err) {
+                error = err;
+                console.log(`Proxy failed: ${proxy}`);
+            }
+        }
+        
+        if (!response || !response.ok) {
+            throw new Error("All proxies failed");
+        }
         
         showProgress(70);
         
         const data = await response.json();
-        console.log("Server response:", data);
+        console.log("✅ Server response:", data);
         
         if (data.success) {
             showProgress(100);
@@ -127,26 +155,25 @@ async function downloadVideo() {
                 hideProgress();
                 showToast(`✅ ${platform} video ready!`, "success");
                 
-                // Show download info
-                downloadMessage.textContent = `"${data.title}" ready to download`;
+                if (data.title) {
+                    downloadMessage.textContent = `"${data.title}" ready to download`;
+                }
                 
-                // Set download link
                 if (data.filename) {
+                    // ✅ Direct download link (no proxy needed for GET)
                     const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
                     downloadLink.href = downloadUrl;
                     downloadLink.download = `${data.title || 'video'}.mp4`;
                     downloadLink.style.display = "inline-block";
                     downloadInfo.style.display = "block";
                     
-                    // Auto click after 1 second
+                    // Auto click
                     setTimeout(() => {
                         downloadLink.click();
-                    }, 1000);
+                    }, 1500);
                 }
                 
-                // Reset input
                 input.value = "";
-                input.placeholder = "Paste another URL";
                 
             }, 1000);
             
@@ -167,7 +194,6 @@ async function downloadVideo() {
         }, 2000);
     }
 }
-
 // Reset form
 function resetForm() {
     input.value = "";
