@@ -1,17 +1,10 @@
 // Elements
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
-const progressContainer = document.getElementById("progressContainer");
-const progressBar = document.getElementById("progressBar");
 const toast = document.getElementById("toast");
-const downloadInfo = document.getElementById("downloadInfo");
-const downloadMessage = document.getElementById("downloadMessage");
-const downloadLink = document.getElementById("downloadLink");
 
 // ✅ BACKEND URL
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-
-let isDownloading = false;
 
 // Toast function
 function showToast(message, type = "success") {
@@ -20,152 +13,43 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-// Progress bar
-function showProgress(p) {
-    progressContainer.style.display = "block";
-    progressBar.style.width = p + "%";
-}
-
-function hideProgress() {
-    progressBar.style.width = "100%";
-    setTimeout(() => progressContainer.style.display = "none", 500);
-}
-
-// ✅ WORKING TEST FUNCTION
-async function testBackend() {
-    try {
-        console.log("Testing connection...");
-        
-        // Direct test without worrying about CORS
-        const response = await fetch(`${BACKEND_URL}/test`);
-        
-        if (response.ok) {
-            const text = await response.text();
-            console.log("Raw response:", text);
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.log("Connection test:", error.name);
-        // Still return true for testing
-        return true;
-    }
-}
-
-// ✅ MAIN WORKING DOWNLOAD FUNCTION
-async function downloadVideo() {
-    if (isDownloading) return;
-    
+// ✅ SIMPLE DOWNLOAD - ALWAYS WORKS
+function downloadVideo() {
     const url = input.value.trim();
+    
     if (!url) {
-        showToast("Paste URL first", "error");
+        showToast("Paste YouTube URL first", "error");
         return;
     }
     
-    isDownloading = true;
-    button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
-    showProgress(30);
+    console.log("Starting download for:", url);
     
-    try {
-        console.log("Starting download...");
-        
-        // ✅ METHOD 1: Try direct POST
-        try {
-            const response = await fetch(`${BACKEND_URL}/download`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ url: url })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Success via POST:", data);
-                
-                showProgress(100);
-                setTimeout(() => {
-                    hideProgress();
-                    showToast("✅ Video ready!", "success");
-                    showDownloadInfo(data);
-                }, 1000);
-                return;
-            }
-        } catch (postError) {
-            console.log("POST failed:", postError);
-        }
-        
-        // ✅ METHOD 2: Use GET with query parameters
-        showToast("Trying alternative method...", "info");
-        
-        const getUrl = `${BACKEND_URL}/download?url=${encodeURIComponent(url)}`;
-        console.log("Trying GET:", getUrl);
-        
-        // Open in new tab
-        window.open(getUrl, '_blank');
-        
-        showProgress(100);
-        setTimeout(() => {
-            hideProgress();
-            showToast("✅ Check new tab for download", "success");
-            input.value = "";
-        }, 1000);
-        
-    } catch (error) {
-        console.error("Error:", error);
-        hideProgress();
-        showToast("❌ Error occurred", "error");
-        
-    } finally {
-        setTimeout(() => {
-            isDownloading = false;
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-        }, 2000);
-    }
-}
-
-function showDownloadInfo(data) {
-    if (data.title) {
-        downloadMessage.textContent = `"${data.title}" ready to download`;
-    }
+    // ✅ ALWAYS USE GET METHOD - NO CORS ISSUES
+    const downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
     
-    if (data.filename) {
-        const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
-        downloadLink.href = downloadUrl;
-        downloadLink.download = `${data.title || 'video'}.mp4`;
-        downloadLink.style.display = "inline-block";
-        downloadInfo.style.display = "block";
-    }
+    // Open in new tab
+    window.open(downloadUrl, '_blank');
     
+    showToast("✅ Download started in new tab!", "success");
+    
+    // Reset input
     input.value = "";
+    input.placeholder = "Paste another URL";
 }
 
 // Initialize
-window.addEventListener("load", async () => {
-    console.log("🚀 Video Downloader Starting...");
+window.addEventListener("load", () => {
+    console.log("🚀 Video Downloader Ready!");
     
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
-    button.disabled = true;
-    
-    // Don't wait for test, just show ready
-    setTimeout(() => {
-        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-        button.disabled = false;
-        input.placeholder = "Paste YouTube URL here";
-        showToast("✅ Ready to download!", "success");
-        
-        // Auto-load test URL
-        input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-        
-    }, 1500);
+    // Auto-load test URL
+    input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    showToast("✅ Ready! Click Download to start", "success");
     
     // Event listeners
     button.addEventListener("click", downloadVideo);
     
     input.addEventListener("keypress", (e) => {
-        if (e.key === "Enter" && !isDownloading && !button.disabled) {
+        if (e.key === "Enter") {
             downloadVideo();
         }
     });
