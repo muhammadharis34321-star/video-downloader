@@ -8,9 +8,9 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// Use CORS Proxy - Yeh 100% kaam karega
+// URLs
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-const CORS_PROXY = "https://corsproxy.io/?"; // Ya "https://api.allorigins.win/raw?url="
+const CORS_PROXY = "https://corsproxy.io/?";
 
 let isDownloading = false;
 
@@ -39,49 +39,43 @@ function showProgress() {
 
 function hideProgress() {
     progressBar.style.width = "100%";
-    setTimeout(() => {
-        progressContainer.style.display = "none";
-    }, 500);
+    setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// Test backend using CORS proxy
+// Get proxy URL
+function getProxyUrl(endpoint) {
+    return `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + endpoint)}`;
+}
+
+// Test backend
 async function testBackend() {
     try {
-        console.log("Testing backend via CORS proxy...");
-        
-        // Method 1: Use corsproxy.io
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(BACKEND_URL + '/test')}`;
-        
+        const proxyUrl = getProxyUrl('/test');
         const response = await fetch(proxyUrl);
         
         if (response.ok) {
             const data = await response.json();
-            console.log("✅ Backend via proxy:", data);
+            console.log("✅ Backend:", data);
             return true;
         }
         return false;
     } catch (error) {
-        console.log("Trying alternative proxy...");
-        
-        // Method 2: Use allorigins.win
-        try {
-            const altProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(BACKEND_URL + '/test')}`;
-            const response2 = await fetch(altProxy);
-            
-            if (response2.ok) {
-                const data = await response2.json();
-                console.log("✅ Backend via allorigins:", data);
-                return true;
-            }
-        } catch (e) {
-            console.log("All proxies failed");
-        }
-        
+        console.error("❌ Backend test failed:", error);
         return false;
     }
 }
 
-// Download function using proxy
+// Validate URL
+function isValidUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Download video
 async function downloadVideo() {
     if (isDownloading) {
         showToast("Please wait...", "error");
@@ -89,29 +83,42 @@ async function downloadVideo() {
     }
     
     const url = input.value.trim();
+    
+    // Validation
     if (!url) {
         showToast("Please enter a video URL", "error");
         return;
     }
     
-    // Simple URL validation
-    if (!url.startsWith('http')) {
+    if (!isValidUrl(url)) {
         showToast("Invalid URL format", "error");
+        return;
+    }
+    
+    // Check if it's a supported platform
+    const urlLower = url.toLowerCase();
+    const isSupported = urlLower.includes('youtube.com') || 
+                       urlLower.includes('youtu.be') || 
+                       urlLower.includes('tiktok.com') || 
+                       urlLower.includes('instagram.com') || 
+                       urlLower.includes('facebook.com');
+    
+    if (!isSupported) {
+        showToast("Only YouTube, TikTok, Instagram, and Facebook are supported", "error");
         return;
     }
     
     isDownloading = true;
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
     input.style.border = "2px solid #4CAF50";
     
     showProgress();
     
     try {
-        console.log("Downloading:", url);
+        console.log("Starting download for:", url);
         
-        // Use proxy for download too
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(BACKEND_URL + '/download')}`;
+        const proxyUrl = getProxyUrl('/download');
         
         const response = await fetch(proxyUrl, {
             method: 'POST',
@@ -124,29 +131,32 @@ async function downloadVideo() {
         hideProgress();
         
         if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Server error ${response.status}: ${errorText}`);
         }
         
         const data = await response.json();
         console.log("Download response:", data);
         
         if (data.success) {
-            showToast("✅ Download successful!", "success");
+            showToast(`✅ ${data.platform || 'Video'} downloaded successfully!`, "success");
             
-            // Show download link
+            // Show download info
             if (data.filename) {
-                downloadMessage.textContent = data.title || "Video";
-                // Direct link for file download (no proxy needed for file)
+                downloadMessage.textContent = data.title || "Video ready for download";
                 downloadLink.href = `${BACKEND_URL}/get_file/${encodeURIComponent(data.filename)}`;
                 downloadLink.style.display = "inline-block";
                 downloadLink.setAttribute('download', data.filename);
                 downloadInfo.style.display = "block";
+                
+                input.value = "";
+                input.placeholder = "Download ready! Paste another URL";
+                
+                // Auto reset after 15 seconds
+                setTimeout(() => {
+                    resetForm();
+                }, 15000);
             }
-            
-            // Auto reset
-            setTimeout(() => {
-                resetForm();
-            }, 10000);
             
         } else {
             showToast(data.error || "Download failed", "error");
@@ -154,9 +164,21 @@ async function downloadVideo() {
         }
         
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Download error:", error);
         hideProgress();
-        showToast("Connection error", "error");
+        
+        let errorMessage = "Download failed. ";
+        if (error.message.includes('429')) {
+            errorMessage += "Too many requests. Try again later.";
+        } else if (error.message.includes('404')) {
+            errorMessage += "Video not found.";
+        } else if (error.message.includes('403')) {
+            errorMessage += "Access denied by the platform.";
+        } else {
+            errorMessage += error.message;
+        }
+        
+        showToast(errorMessage, "error");
         setTimeout(() => resetForm(), 3000);
     } finally {
         isDownloading = false;
@@ -164,10 +186,12 @@ async function downloadVideo() {
 }
 
 function resetForm() {
-    input.value = "";
     input.style.border = "2px solid #ddd";
+    input.style.color = "#333";
+    input.placeholder = "Paste TikTok, Instagram, YouTube, or Facebook URL here";
     progressContainer.style.display = "none";
     downloadInfo.style.display = "none";
+    downloadLink.style.display = "none";
     button.disabled = false;
     isDownloading = false;
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
@@ -175,8 +199,9 @@ function resetForm() {
 
 // Initialize
 window.addEventListener("load", async () => {
-    console.log("🚀 Video Downloader Starting...");
+    console.log("🚀 Video Downloader Started");
     console.log("📡 Backend:", BACKEND_URL);
+    console.log("🔗 CORS Proxy:", CORS_PROXY);
     
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
     button.disabled = true;
@@ -186,7 +211,7 @@ window.addEventListener("load", async () => {
     if (connected) {
         button.innerHTML = '<i class="fas fa-download"></i> Download Video';
         button.disabled = false;
-        input.placeholder = "Paste video URL (YouTube, TikTok, Instagram, Facebook)";
+        input.placeholder = "Paste video URL and click Download";
         showToast("✅ Connected to server", "success");
         console.log("✅ System ready");
     } else {
@@ -200,25 +225,50 @@ window.addEventListener("load", async () => {
     button.addEventListener("click", downloadVideo);
     
     input.addEventListener("keypress", (e) => {
-        if (e.key === "Enter" && !button.disabled) {
+        if (e.key === "Enter" && !isDownloading && !button.disabled) {
             downloadVideo();
         }
     });
     
-    // URL validation
+    // Real-time URL validation
     input.addEventListener("input", function() {
         const url = this.value.trim();
-        if (url) {
-            if (url.includes('http') && url.includes('.')) {
-                this.style.border = "2px solid #4CAF50";
-            } else {
-                this.style.border = "2px solid #ff9800";
-            }
-        } else {
+        
+        if (!url) {
             this.style.border = "2px solid #ddd";
+            this.style.color = "#333";
+            return;
+        }
+        
+        if (!isValidUrl(url)) {
+            this.style.border = "2px solid #ff9800";
+            this.style.color = "#ff9800";
+            return;
+        }
+        
+        const urlLower = url.toLowerCase();
+        const isSupported = urlLower.includes('youtube.com') || 
+                           urlLower.includes('youtu.be') || 
+                           urlLower.includes('tiktok.com') || 
+                           urlLower.includes('instagram.com') || 
+                           urlLower.includes('facebook.com');
+        
+        if (isSupported) {
+            this.style.border = "2px solid #4CAF50";
+            this.style.color = "#4CAF50";
+        } else {
+            this.style.border = "2px solid #ff9800";
+            this.style.color = "#ff9800";
         }
     });
 });
 
-// Manual test function
-window.testConnection = testBackend;
+// Manual test functions
+window.testDownload = async function(testUrl) {
+    if (testUrl) {
+        input.value = testUrl;
+    }
+    await downloadVideo();
+};
+
+window.checkConnection = testBackend;
