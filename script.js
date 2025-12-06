@@ -32,23 +32,22 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// ✅ SIMPLE BACKEND TEST - SIRF PROXY SE
+// ✅ Test backend - ALWAYS USE PROXY
 async function testBackend() {
     try {
-        console.log("🔄 Testing via proxy...");
+        console.log("🔗 Testing connection...");
         
-        // ✅ SIRF PROXY USE KARO
         const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
         const response = await fetch(proxyUrl);
         
         if (response.ok) {
             const data = await response.json();
-            console.log("✅ Connected via proxy:", data);
+            console.log("✅ Connected:", data);
             return true;
         }
         return false;
     } catch (error) {
-        console.error("Connection error:", error);
+        console.error("❌ Connection failed:", error);
         return false;
     }
 }
@@ -73,7 +72,7 @@ function detectPlatform(url) {
     return 'Unknown';
 }
 
-// ✅ SIMPLE DOWNLOAD FUNCTION - SIRF PROXY SE
+// ✅ MAIN DOWNLOAD FUNCTION
 async function downloadVideo() {
     if (isDownloading) {
         showToast("Please wait...", "error");
@@ -106,7 +105,7 @@ async function downloadVideo() {
     try {
         console.log(`🎬 Downloading ${platform} video...`);
         
-        // ✅ HAMESHA PROXY USE KARO
+        // ✅ ALWAYS USE PROXY
         const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
         const response = await fetch(proxyUrl, {
             method: "POST",
@@ -119,7 +118,7 @@ async function downloadVideo() {
         showProgress(70);
         
         const data = await response.json();
-        console.log("Response:", data);
+        console.log("Server response:", data);
         
         if (data.success) {
             showProgress(100);
@@ -129,9 +128,7 @@ async function downloadVideo() {
                 showToast(`✅ ${platform} video ready!`, "success");
                 
                 // Show download info
-                if (data.title) {
-                    downloadMessage.textContent = `"${data.title}" ready to download`;
-                }
+                downloadMessage.textContent = `"${data.title}" ready to download`;
                 
                 // Set download link
                 if (data.filename) {
@@ -140,9 +137,14 @@ async function downloadVideo() {
                     downloadLink.download = `${data.title || 'video'}.mp4`;
                     downloadLink.style.display = "inline-block";
                     downloadInfo.style.display = "block";
-                    console.log("📥 Download URL:", downloadUrl);
+                    
+                    // Auto click after 1 second
+                    setTimeout(() => {
+                        downloadLink.click();
+                    }, 1000);
                 }
                 
+                // Reset input
                 input.value = "";
                 input.placeholder = "Paste another URL";
                 
@@ -153,7 +155,7 @@ async function downloadVideo() {
         }
         
     } catch (error) {
-        console.error("❌ Error:", error);
+        console.error("❌ Download error:", error);
         hideProgress();
         showToast(`Error: ${error.message}`, "error");
         
@@ -210,7 +212,7 @@ window.addEventListener("load", async () => {
     if (connected) {
         button.innerHTML = '<i class="fas fa-download"></i> Download Video';
         button.disabled = false;
-        input.placeholder = "Paste video URL and click Download";
+        input.placeholder = "Paste YouTube/TikTok/Instagram/Facebook URL";
         showToast("✅ Connected to server", "success");
     } else {
         button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Server Offline';
@@ -227,3 +229,9 @@ window.addEventListener("load", async () => {
         }
     });
 });
+
+// Quick test function
+window.quickTest = function() {
+    input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    downloadVideo();
+};
