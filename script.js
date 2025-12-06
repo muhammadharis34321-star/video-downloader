@@ -10,7 +10,117 @@ const downloadLink = document.getElementById("downloadLink");
 
 // URLs - CHANGE THIS TO YOUR PYTHONANYWHERE URL
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-const CORS_PROXY = "https://corsproxy.io/?";  // ✅ Naya CORS proxy
+
+// Line 18: CORS_PROXY change karo
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";  // ✅ Ye working proxy hai
+
+// Line 130-137: Simplify download function
+async function downloadVideo() {
+    if (isDownloading) return;
+    
+    const url = input.value.trim();
+    
+    if (!url) {
+        showToast("Please paste a video URL first", "error");
+        return;
+    }
+    
+    if (!isValidUrl(url)) {
+        showToast("Enter valid URL (with http://)", "error");
+        return;
+    }
+    
+    const platform = detectPlatform(url);
+    if (platform === 'Unknown') {
+        showToast("Only YouTube, TikTok, Instagram, Facebook supported", "error");
+        return;
+    }
+    
+    isDownloading = true;
+    input.style.border = "2px solid #4CAF50";
+    button.disabled = true;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+    showProgress(30);
+    
+    try {
+        console.log(`Downloading: ${url}`);
+        
+        // ✅ Tumhara current backend ke hisab se simple call
+        const response = await fetch(getProxyUrl('/download'), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ url: url })
+        });
+        
+        showProgress(70);
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Response:", data);
+        
+        if (data.success) {
+            showProgress(100);
+            setTimeout(() => {
+                hideProgress();
+                showToast(`✅ ${platform} video ready!`, "success");
+                
+                // ✅ Current backend response format ke hisab se
+                const title = data.title || 'Video';
+                downloadMessage.textContent = `"${title}" is ready`;
+                
+                // ✅ Agar filename hai toh download link show karo
+                if (data.filename) {
+                    downloadLink.href = `${BACKEND_URL}/get_file/${data.filename}`;
+                    downloadLink.download = `${title}.mp4`;
+                    downloadLink.style.display = "inline-block";
+                }
+                
+                downloadInfo.style.display = "block";
+                input.placeholder = "Download ready!";
+                
+                setTimeout(() => {
+                    if (isDownloading) resetForm();
+                }, 15000);
+                
+            }, 1000);
+        } else {
+            throw new Error(data.error || "Download failed");
+        }
+        
+    } catch (error) {
+        console.error("Error:", error);
+        hideProgress();
+        showToast(`Error: ${error.message}`, "error");
+        resetForm();
+    } finally {
+        isDownloading = false;
+    }
+}
+
+// Line 315: testBackend function simplify karo
+async function testBackend() {
+    try {
+        console.log("🔍 Testing backend...");
+        
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(BACKEND_URL + '/test')}`;
+        const response = await fetch(proxyUrl);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log("✅ Backend connected:", data);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error("❌ Backend test error:", error);
+        return false;
+    }
+}
 
 let isDownloading = false;
 
