@@ -14,39 +14,41 @@ const BACKEND_URL = "https://python22.pythonanywhere.com";
 // Line 18: CORS_PROXY change karo
 const CORS_PROXY = "https://api.allorigins.win/raw?url=";  // ✅ Ye working proxy hai
 
-// Line 130-137: Simplify download function
+// Simple working download function
 async function downloadVideo() {
     if (isDownloading) return;
     
     const url = input.value.trim();
     
     if (!url) {
-        showToast("Please paste a video URL first", "error");
+        showToast("Please paste a video URL", "error");
         return;
     }
     
     if (!isValidUrl(url)) {
-        showToast("Enter valid URL (with http://)", "error");
+        showToast("Enter valid URL", "error");
         return;
     }
     
     const platform = detectPlatform(url);
     if (platform === 'Unknown') {
-        showToast("Only YouTube, TikTok, Instagram, Facebook supported", "error");
+        showToast("Supported: YouTube, TikTok, Instagram, Facebook", "error");
         return;
     }
     
     isDownloading = true;
     input.style.border = "2px solid #4CAF50";
     button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Downloading...`;
     showProgress(30);
     
     try {
         console.log(`Downloading: ${url}`);
         
-        // ✅ Tumhara current backend ke hisab se simple call
-        const response = await fetch(getProxyUrl('/download'), {
+        // Simple direct call
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(BACKEND_URL + '/download')}`;
+        
+        const response = await fetch(proxyUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -56,38 +58,46 @@ async function downloadVideo() {
         
         showProgress(70);
         
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+        // Check response
+        const text = await response.text();
+        console.log("Raw response:", text.substring(0, 200));
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("Invalid JSON:", text);
+            throw new Error("Server returned invalid response");
         }
         
-        const data = await response.json();
-        console.log("Response:", data);
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
         
         if (data.success) {
             showProgress(100);
-            setTimeout(() => {
-                hideProgress();
-                showToast(`✅ ${platform} video ready!`, "success");
-                
-                // ✅ Current backend response format ke hisab se
-                const title = data.title || 'Video';
-                downloadMessage.textContent = `"${title}" is ready`;
-                
-                // ✅ Agar filename hai toh download link show karo
-                if (data.filename) {
-                    downloadLink.href = `${BACKEND_URL}/get_file/${data.filename}`;
-                    downloadLink.download = `${title}.mp4`;
-                    downloadLink.style.display = "inline-block";
-                }
-                
-                downloadInfo.style.display = "block";
-                input.placeholder = "Download ready!";
-                
-                setTimeout(() => {
-                    if (isDownloading) resetForm();
-                }, 15000);
-                
-            }, 1000);
+            
+            showToast(`✅ ${platform} video ready!`, "success");
+            
+            // Show download link
+            downloadMessage.textContent = `"${data.title}" ready to download`;
+            
+            if (data.download_url) {
+                downloadLink.href = data.download_url;
+            } else if (data.filename) {
+                downloadLink.href = `${BACKEND_URL}/get_file/${data.filename}`;
+            }
+            
+            downloadLink.style.display = "inline-block";
+            downloadLink.download = data.title ? `${data.title}.mp4` : "video.mp4";
+            downloadLink.target = "_blank";
+            downloadInfo.style.display = "block";
+            
+            input.placeholder = "Ready! Paste another URL";
+            
+            setTimeout(() => hideProgress(), 1000);
+            setTimeout(() => resetForm(), 20000);
+            
         } else {
             throw new Error(data.error || "Download failed");
         }
@@ -96,12 +106,11 @@ async function downloadVideo() {
         console.error("Error:", error);
         hideProgress();
         showToast(`Error: ${error.message}`, "error");
-        resetForm();
+        setTimeout(resetForm, 3000);
     } finally {
         isDownloading = false;
     }
 }
-
 // Line 315: testBackend function simplify karo
 async function testBackend() {
     try {
