@@ -34,21 +34,40 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// Test backend connection
+// JavaScript code mein ye function update karo
 async function testBackend() {
     try {
-        // ✅ DIRECT call try karo (Flask CORS enabled hai)
-        const response = await fetch(`${BACKEND_URL}/test`);
+        console.log("Testing backend connection...");
         
-        if (response.ok) {
-            const data = await response.json();
-            console.log("✅ Backend direct connection:", data);
-            return true;
+        // ✅ DIRECT call try (with credentials disable)
+        console.log("Trying direct call...");
+        try {
+            const response = await fetch(`${BACKEND_URL}/test`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log("✅ Backend direct connection:", data);
+                return true;
+            }
+        } catch (directError) {
+            console.log("Direct call failed:", directError);
         }
         
         // ✅ Agar direct nahi chala, toh proxy se try karo
+        console.log("Trying via proxy...");
         const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
-        const proxyResponse = await fetch(proxyUrl);
+        const proxyResponse = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
         
         if (proxyResponse.ok) {
             const data = await proxyResponse.json();
@@ -56,6 +75,7 @@ async function testBackend() {
             return true;
         }
         
+        console.log("❌ Both methods failed");
         return false;
     } catch (error) {
         console.error("Test error:", error);
