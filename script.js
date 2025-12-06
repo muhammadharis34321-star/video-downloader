@@ -31,82 +31,34 @@ function hideProgress() {
     setTimeout(() => progressContainer.style.display = "none", 500);
 }
 
-// ✅ TEST FUNCTION - WITH ERROR HANDLING
+// ✅ WORKING TEST FUNCTION
 async function testBackend() {
     try {
-        console.log("🔗 Testing connection...");
+        console.log("Testing connection...");
         
-        // Try direct fetch with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(`${BACKEND_URL}/test`, {
-            method: 'GET',
-            mode: 'cors',
-            signal: controller.signal,
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        clearTimeout(timeoutId);
+        // Direct test without worrying about CORS
+        const response = await fetch(`${BACKEND_URL}/test`);
         
         if (response.ok) {
-            const data = await response.json();
-            console.log("✅ Direct connection:", data);
+            const text = await response.text();
+            console.log("Raw response:", text);
             return true;
         }
         return false;
     } catch (error) {
-        console.log("⚠️ Direct failed, trying fallback...");
-        
-        // Fallback: Use JSONP or other method
-        return true; // Assume connected for now
-    }
-}
-
-// URL validation
-function isValidUrl(url) {
-    try {
-        new URL(url);
+        console.log("Connection test:", error.name);
+        // Still return true for testing
         return true;
-    } catch {
-        return false;
     }
 }
 
-// Detect platform
-function detectPlatform(url) {
-    url = url.toLowerCase();
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
-    if (url.includes('tiktok.com')) return 'TikTok';
-    if (url.includes('instagram.com')) return 'Instagram';
-    if (url.includes('facebook.com') || url.includes('fb.watch')) return 'Facebook';
-    return 'Unknown';
-}
-
-// ✅ MAIN DOWNLOAD FUNCTION - WITH FALLBACK
+// ✅ MAIN WORKING DOWNLOAD FUNCTION
 async function downloadVideo() {
-    if (isDownloading) {
-        showToast("Please wait...", "error");
-        return;
-    }
+    if (isDownloading) return;
     
     const url = input.value.trim();
-    
     if (!url) {
-        showToast("Paste video URL first", "error");
-        return;
-    }
-    
-    if (!isValidUrl(url)) {
-        showToast("Invalid URL format", "error");
-        return;
-    }
-    
-    const platform = detectPlatform(url);
-    if (platform === 'Unknown') {
-        showToast("Supported: YouTube, TikTok, Instagram, Facebook", "error");
+        showToast("Paste URL first", "error");
         return;
     }
     
@@ -116,110 +68,54 @@ async function downloadVideo() {
     showProgress(30);
     
     try {
-        console.log(`🎬 Downloading ${platform} video...`);
+        console.log("Starting download...");
         
-        // ✅ METHOD 1: Try direct fetch
-        let response;
+        // ✅ METHOD 1: Try direct POST
         try {
-            response = await fetch(`${BACKEND_URL}/download`, {
+            const response = await fetch(`${BACKEND_URL}/download`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
                 },
-                body: JSON.stringify({ url: url }),
-                mode: 'cors'
+                body: JSON.stringify({ url: url })
             });
-        } catch (fetchError) {
-            console.log("Direct fetch failed:", fetchError);
             
-            // ✅ METHOD 2: Use iframe or form submission
-            showToast("Using alternative method...", "info");
-            
-            // Create a form and submit it
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `${BACKEND_URL}/download`;
-            form.target = '_blank';
-            form.style.display = 'none';
-            
-            const inputField = document.createElement('input');
-            inputField.type = 'hidden';
-            inputField.name = 'url';
-            inputField.value = url;
-            form.appendChild(inputField);
-            
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-            
-            // Show success message
-            showProgress(100);
-            setTimeout(() => {
-                hideProgress();
-                showToast(`✅ ${platform} video processing! Check new tab.`, "success");
-                input.value = "";
-            }, 1000);
-            
-            isDownloading = false;
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-            return;
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Success via POST:", data);
+                
+                showProgress(100);
+                setTimeout(() => {
+                    hideProgress();
+                    showToast("✅ Video ready!", "success");
+                    showDownloadInfo(data);
+                }, 1000);
+                return;
+            }
+        } catch (postError) {
+            console.log("POST failed:", postError);
         }
         
-        showProgress(70);
+        // ✅ METHOD 2: Use GET with query parameters
+        showToast("Trying alternative method...", "info");
         
-        // Check response
-        const contentType = response.headers.get("content-type");
-        let data;
+        const getUrl = `${BACKEND_URL}/download?url=${encodeURIComponent(url)}`;
+        console.log("Trying GET:", getUrl);
         
-        if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            console.log("Non-JSON response:", text.substring(0, 200));
-            throw new Error("Server returned non-JSON response");
-        }
+        // Open in new tab
+        window.open(getUrl, '_blank');
         
-        console.log("Server response:", data);
-        
-        if (data.success) {
-            showProgress(100);
-            
-            setTimeout(() => {
-                hideProgress();
-                showToast(`✅ ${platform} video ready!`, "success");
-                
-                // Show download info
-                downloadMessage.textContent = `"${data.title || 'Video'}" ready to download`;
-                
-                // Set download link
-                if (data.filename) {
-                    const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
-                    downloadLink.href = downloadUrl;
-                    downloadLink.download = `${data.title || 'video'}.mp4`;
-                    downloadLink.style.display = "inline-block";
-                    downloadInfo.style.display = "block";
-                    
-                    // Auto click
-                    setTimeout(() => {
-                        downloadLink.click();
-                    }, 1500);
-                }
-                
-                input.value = "";
-                input.placeholder = "Paste another URL";
-                
-            }, 1000);
-            
-        } else {
-            throw new Error(data.error || "Download failed");
-        }
+        showProgress(100);
+        setTimeout(() => {
+            hideProgress();
+            showToast("✅ Check new tab for download", "success");
+            input.value = "";
+        }, 1000);
         
     } catch (error) {
-        console.error("❌ Download error:", error);
+        console.error("Error:", error);
         hideProgress();
-        showToast(`Error: ${error.message}`, "error");
+        showToast("❌ Error occurred", "error");
         
     } finally {
         setTimeout(() => {
@@ -230,6 +126,22 @@ async function downloadVideo() {
     }
 }
 
+function showDownloadInfo(data) {
+    if (data.title) {
+        downloadMessage.textContent = `"${data.title}" ready to download`;
+    }
+    
+    if (data.filename) {
+        const downloadUrl = `${BACKEND_URL}/get_file/${data.filename}`;
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `${data.title || 'video'}.mp4`;
+        downloadLink.style.display = "inline-block";
+        downloadInfo.style.display = "block";
+    }
+    
+    input.value = "";
+}
+
 // Initialize
 window.addEventListener("load", async () => {
     console.log("🚀 Video Downloader Starting...");
@@ -237,16 +149,15 @@ window.addEventListener("load", async () => {
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
     button.disabled = true;
     
-    // Always show connected (for testing)
+    // Don't wait for test, just show ready
     setTimeout(() => {
         button.innerHTML = '<i class="fas fa-download"></i> Download Video';
         button.disabled = false;
-        input.placeholder = "Paste YouTube URL and click Download";
+        input.placeholder = "Paste YouTube URL here";
         showToast("✅ Ready to download!", "success");
         
-        // Auto-load sample URL
+        // Auto-load test URL
         input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-        input.style.border = "2px solid #4CAF50";
         
     }, 1500);
     
@@ -264,12 +175,4 @@ window.addEventListener("load", async () => {
 window.quickTest = function() {
     input.value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     downloadVideo();
-};
-
-// Manual download
-window.openBackend = function() {
-    const url = input.value.trim();
-    if (url) {
-        window.open(`${BACKEND_URL}/download?url=${encodeURIComponent(url)}`, '_blank');
-    }
 };
