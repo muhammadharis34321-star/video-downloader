@@ -1,17 +1,11 @@
-// Elements
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
-const progressContainer = document.getElementById("progressContainer");
-const progressBar = document.getElementById("progressBar");
 const toast = document.getElementById("toast");
 const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// URLs - Use direct connection first
 const BACKEND_URL = "https://python22.pythonanywhere.com";
-const CORS_PROXY = "https://corsproxy.io/?";
-
 let isDownloading = false;
 
 function showToast(message, type = "success") {
@@ -20,64 +14,24 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-function showProgress() {
-    progressContainer.style.display = "block";
-    progressBar.style.width = "0%";
-    
-    let width = 0;
-    const interval = setInterval(() => {
-        if (width >= 90) clearInterval(interval);
-        else {
-            width += 2;
-            progressBar.style.width = width + "%";
-        }
-    }, 50);
-}
-
-function hideProgress() {
-    progressBar.style.width = "100%";
-    setTimeout(() => progressContainer.style.display = "none", 500);
-}
-
-// Test backend
 async function testBackend() {
     try {
-        // Try direct first
         const response = await fetch(`${BACKEND_URL}/test`);
-        if (response.ok) {
-            const data = await response.json();
-            console.log("✅ Direct connection:", data);
-            return true;
-        }
-    } catch (e) {
-        console.log("Direct failed, trying proxy...");
-        
-        // Try with proxy
-        try {
-            const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/test')}`;
-            const response = await fetch(proxyUrl);
-            if (response.ok) {
-                const data = await response.json();
-                console.log("✅ Proxy connection:", data);
-                return true;
-            }
-        } catch (proxyError) {
-            console.log("Both methods failed");
-        }
+        const data = await response.json();
+        console.log("Backend:", data);
+        return true;
+    } catch (error) {
+        console.log("Backend test failed:", error);
+        return false;
     }
-    return false;
 }
 
-// Download function - Try multiple methods
 async function downloadVideo() {
-    if (isDownloading) {
-        showToast("Please wait...", "error");
-        return;
-    }
+    if (isDownloading) return;
     
     const url = input.value.trim();
     if (!url) {
-        showToast("Enter video URL", "error");
+        showToast("Enter URL", "error");
         return;
     }
     
@@ -88,44 +42,19 @@ async function downloadVideo() {
     
     isDownloading = true;
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    
-    showProgress();
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
     
     try {
-        console.log("Starting download for:", url);
+        console.log("Sending request for:", url);
         
-        // Method 1: Try direct
-        let response;
-        try {
-            response = await fetch(`${BACKEND_URL}/download`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ url: url })
-            });
-            console.log("Direct response status:", response.status);
-        } catch (directError) {
-            console.log("Direct failed:", directError);
-            
-            // Method 2: Try with proxy
-            const proxyUrl = `${CORS_PROXY}${encodeURIComponent(BACKEND_URL + '/download')}`;
-            response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ url: url })
-            });
-            console.log("Proxy response status:", response.status);
-        }
-        
-        hideProgress();
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
+        const response = await fetch(`${BACKEND_URL}/download`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url: url })
+        });
         
         const data = await response.json();
-        console.log("Download result:", data);
+        console.log("Response:", data);
         
         if (data.success) {
             showToast("✅ Download successful!", "success");
@@ -150,8 +79,7 @@ async function downloadVideo() {
         
     } catch (error) {
         console.error("Error:", error);
-        hideProgress();
-        showToast("Download failed: " + error.message, "error");
+        showToast("Connection error", "error");
         setTimeout(() => resetForm(), 3000);
     } finally {
         isDownloading = false;
@@ -162,12 +90,10 @@ function resetForm() {
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
     downloadInfo.style.display = "none";
-    progressContainer.style.display = "none";
 }
 
-// Initialize
 window.addEventListener("load", async () => {
-    console.log("🚀 Starting...");
+    console.log("Starting...");
     
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
     button.disabled = true;
@@ -193,8 +119,8 @@ window.addEventListener("load", async () => {
     });
 });
 
-// Manual test function
-window.testDownload = function(testUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ") {
-    input.value = testUrl;
+// Manual test
+window.testDownload = function(url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ") {
+    input.value = url;
     downloadVideo();
 };
