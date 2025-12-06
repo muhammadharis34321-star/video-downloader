@@ -9,7 +9,7 @@ const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
 // Backend API URL - YAHAN APNA PYTHONANYWHERE URL DALNA HAI
-const API_BASE = "https://yourusername.pythonanywhere.com"; // ⚠️ APNA URL DALO YAHA
+const API_BASE = "https://python22.pythonanywhere.com"; // Ye hai aapka backend URL
 
 // App state
 let isDownloading = false;
