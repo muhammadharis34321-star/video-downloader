@@ -13,7 +13,7 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-// ✅ SIMPLE DOWNLOAD - ALWAYS WORKS
+// ✅ SIMPLE DOWNLOAD - GET METHOD SE (NO CORS ISSUE)
 function downloadVideo() {
     const url = input.value.trim();
     
@@ -24,8 +24,25 @@ function downloadVideo() {
     
     console.log("Starting download for:", url);
     
-    // ✅ ALWAYS USE GET METHOD - NO CORS ISSUES
-    const downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
+    // ✅ METHOD 1: Direct download (YouTube/TikTok/Instagram/Facebook)
+    let downloadUrl;
+    
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
+    } 
+    else if (url.includes('tiktok.com')) {
+        downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
+    }
+    else if (url.includes('instagram.com')) {
+        downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
+    }
+    else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+        downloadUrl = `${BACKEND_URL}/download_direct?url=${encodeURIComponent(url)}`;
+    }
+    else {
+        showToast("Invalid URL - Supported: YouTube, TikTok, Instagram, Facebook", "error");
+        return;
+    }
     
     // Open in new tab
     window.open(downloadUrl, '_blank');
