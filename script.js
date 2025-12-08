@@ -73,7 +73,6 @@ async function downloadVideo() {
         return;
     }
     
-    // Basic URL check
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
         showToast("Please enter a valid URL", "error");
         return;
@@ -81,25 +80,20 @@ async function downloadVideo() {
     
     isDownloading = true;
     
-    // Update UI
     input.style.border = "2px solid #4CAF50";
     input.style.color = "#4CAF50";
     input.placeholder = "Processing...";
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
-    // Show progress
     animateProgress();
     
     try {
         console.log(`🚀 Sending to backend: ${url}`);
         
-        // Send to backend
         const response = await fetch(`${BACKEND_URL}/download`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ url: url })
         });
         
@@ -111,7 +105,6 @@ async function downloadVideo() {
         if (data.success) {
             showToast(`✅ ${data.platform} video ready!`, "success");
             
-            // Show download link
             downloadMessage.textContent = `${data.platform} video ready to download`;
             downloadLink.href = `${BACKEND_URL}/get_file/${encodeURIComponent(data.filename)}`;
             downloadLink.style.display = "inline-block";
@@ -121,7 +114,6 @@ async function downloadVideo() {
             
             input.placeholder = "Download ready! Paste another URL";
             
-            // Auto reset after 15 seconds
             setTimeout(() => {
                 if (isDownloading) {
                     resetForm();
@@ -156,41 +148,13 @@ async function downloadVideo() {
     }
 }
 
-// Real-time input validation
-function validateInput() {
-    const url = input.value.trim();
-    
-    if (!url) {
-        input.style.border = "2px solid #ddd";
-        button.disabled = false;
-        return;
-    }
-    
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-        input.style.border = "2px solid #4CAF50";
-        button.disabled = false;
-    } else {
-        input.style.border = "2px solid #ff9800";
-        button.disabled = false;
-    }
-}
-
 // Event Listeners
 button.addEventListener("click", downloadVideo);
-
-input.addEventListener("input", validateInput);
 
 input.addEventListener("keypress", (e) => {
     if (e.key === "Enter" && !isDownloading) {
         downloadVideo();
     }
-});
-
-downloadLink.addEventListener("click", () => {
-    showToast("Starting download...", "success");
-    setTimeout(() => {
-        resetForm();
-    }, 2000);
 });
 
 // Initialize
@@ -206,10 +170,6 @@ window.addEventListener("load", async () => {
             console.log("✅ Backend connected");
             button.innerHTML = '<i class="fas fa-download"></i> Download Video';
             input.placeholder = "Paste video URL and click Download";
-        } else {
-            button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Server Offline';
-            button.disabled = true;
-            input.placeholder = "Server offline";
         }
     } catch (error) {
         console.log("⚠️ Backend check failed");
