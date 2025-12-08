@@ -1,7 +1,3 @@
-
-
-
-
 // Elements select kar rahe hain
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
@@ -14,6 +10,7 @@ const downloadLink = document.getElementById("downloadLink");
 
 // ✅ TUMHARA APNA BACKEND
 const BACKEND_URL = "https://python22.pythonanywhere.com";
+const API_BASE = BACKEND_URL; // ✅ ADD THIS LINE
 
 // App state
 let isDownloading = false;
@@ -203,10 +200,10 @@ async function downloadVideo() {
     try {
         console.log(`🚀 Starting download: ${url}`);
         console.log(`📱 Platform: ${platform}`);
-        console.log(`🔗 Backend: ${API_BASE}/download`);
+        console.log(`🔗 Backend: ${BACKEND_URL}/download`);
         
         // Send request to backend
-        const response = await fetch(`${API_BASE}/download`, {
+        const response = await fetch(`${BACKEND_URL}/download`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -232,7 +229,7 @@ async function downloadVideo() {
             downloadMessage.textContent = `"${title}" ready to download`;
             
             // Set download link - CORRECTED URL
-            downloadLink.href = `${API_BASE}/get_file/${encodeURIComponent(data.filename)}`;
+            downloadLink.href = `${BACKEND_URL}/get_file/${encodeURIComponent(data.filename)}`;
             downloadLink.style.display = "inline-block";
             downloadLink.setAttribute('download', data.filename);
             downloadLink.setAttribute('target', '_blank');
@@ -316,7 +313,7 @@ function validateInput() {
 // Test backend connection
 async function checkBackend() {
     try {
-        const response = await fetch(`${API_BASE}/test`, {
+        const response = await fetch(`${BACKEND_URL}/test`, {
             method: "GET",
             headers: { "Accept": "application/json" }
         });
@@ -368,7 +365,7 @@ downloadLink.addEventListener("click", (e) => {
 // Initialize on page load
 window.addEventListener("load", async () => {
     console.log("🚀 Video Downloader initialized");
-    console.log(`📡 Backend URL: ${API_BASE}`);
+    console.log(`📡 Backend URL: ${BACKEND_URL}`);
     
     // Check backend
     const isConnected = await checkBackend();
