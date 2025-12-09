@@ -1,12 +1,9 @@
-// Simple Direct Video Downloader
+// COMPLETE WORKING VIDEO DOWNLOADER - COPY PASTE THIS
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
 const toast = document.getElementById("toast");
 
-// ✅ TUMHARA BACKEND
-const BACKEND_URL = "https://python22.pythonanywhere.com";
-
-// Toast function
+// TOAST FUNCTION
 function showToast(message, type = "success") {
     toast.textContent = message;
     toast.className = "toast";
@@ -15,20 +12,7 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-// Get YouTube video ID
-function getYouTubeId(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length === 11) ? match[7] : null;
-}
-
-// Get TikTok video ID
-function getTikTokId(url) {
-    const match = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
-    return match ? match[1] : null;
-}
-
-// Main download function
+// MAIN DOWNLOAD FUNCTION
 async function downloadVideo() {
     const url = input.value.trim();
     
@@ -37,51 +21,113 @@ async function downloadVideo() {
         return;
     }
     
+    if (!url.startsWith('http')) {
+        showToast("Please enter valid URL", "error");
+        return;
+    }
+    
+    // Disable button
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
     
     try {
-        // Send to backend
-        const response = await fetch("https://your-backend.com/download", {
+        // YAHAN APNA BACKEND URL DALNA HAI
+        // AGAR LOCAL TEST KARNA HAI TO: http://localhost:5000
+        // AGAR PythonAnywhere PE HAI TO: https://yourusername.pythonanywhere.com
+        const BACKEND_URL = "https://python22.pythonanywhere.com"; // CHANGE THIS
+        
+        console.log("Sending to backend:", url);
+        
+        const response = await fetch(`${BACKEND_URL}/download`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({url: url})
         });
         
         const data = await response.json();
+        console.log("Backend response:", data);
         
-        if (data.success && data.download_url) {
-            // Create direct download link
-            const link = document.createElement('a');
-            link.href = data.download_url;
-            link.download = data.filename || "video.mp4";
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showToast("✅ Download started!", "success");
+        if (data.success) {
+            // AGAR DIRECT DOWNLOAD URL HAI
+            if (data.download_url || data.url) {
+                const downloadUrl = data.download_url || data.url;
+                
+                // Create invisible link and click it
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = data.filename || `video_${Date.now()}.mp4`;
+                link.target = '_blank';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast("✅ Download started!", "success");
+                
+            } 
+            // AGAR REDIRECT HAI (external service)
+            else if (data.redirect_url) {
+                // Open external service in new tab
+                window.open(data.redirect_url, '_blank');
+                showToast("✅ Opening download page...", "success");
+            }
         } else {
-            showToast("Download failed: " + (data.error || "Unknown error"), "error");
+            showToast("Error: " + (data.error || "Failed to download"), "error");
         }
         
     } catch (error) {
-        showToast("Connection error. Try again.", "error");
+        console.error("Download error:", error);
+        
+        // IF BACKEND FAILS, USE EXTERNAL SERVICES DIRECTLY
+        let externalUrl = "";
+        
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            externalUrl = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
+            showToast("Using YouTube downloader...", "info");
+        } 
+        else if (url.includes('tiktok.com')) {
+            externalUrl = `https://snaptik.app/${encodeURIComponent(url)}`;
+            showToast("Using TikTok downloader...", "info");
+        }
+        else if (url.includes('instagram.com')) {
+            externalUrl = `https://snapinsta.app/${encodeURIComponent(url)}`;
+            showToast("Using Instagram downloader...", "info");
+        }
+        else if (url.includes('facebook.com')) {
+            externalUrl = `https://getfbot.com/${encodeURIComponent(url)}`;
+            showToast("Using Facebook downloader...", "info");
+        }
+        else {
+            externalUrl = `https://savetube.io/${encodeURIComponent(url)}`;
+            showToast("Using video downloader...", "info");
+        }
+        
+        // Open external service
+        window.open(externalUrl, '_blank');
+        
     } finally {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-        input.value = "";
+        // Reset button
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+            input.value = "";
+            input.placeholder = "Paste another URL";
+        }, 2000);
     }
 }
 
-// Event listeners
+// EVENT LISTENERS
 button.addEventListener("click", downloadVideo);
+
 input.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") downloadVideo();
+    if (e.key === "Enter") {
+        downloadVideo();
+    }
 });
 
-// Initialize
+// INITIALIZE
 window.addEventListener("load", () => {
-    console.log("✅ Video Downloader Ready");
-    showToast("Paste video URL and click Download", "success");
+    console.log("🎬 Video Downloader Ready");
+    showToast("Paste any video URL and click Download", "success");
+    input.focus();
 });
