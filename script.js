@@ -8,8 +8,8 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// ✅ TUMHARA BACKEND
-const BACKEND_URL = "https://python22.pythonanywhere.com";
+// ✅ NEW CLOUDFLARE WORKER BACKEND
+const BACKEND_URL = "https://your-worker-name.your-account.workers.dev";
 
 let isDownloading = false;
 
@@ -105,12 +105,17 @@ async function downloadVideo() {
         if (data.success) {
             showToast(`✅ ${data.platform} video ready!`, "success");
             
-            downloadMessage.textContent = `${data.platform} video ready to download`;
-            downloadLink.href = `${BACKEND_URL}/get_file/${encodeURIComponent(data.filename)}`;
-            downloadLink.style.display = "inline-block";
-            downloadLink.setAttribute('download', data.filename);
-            downloadLink.setAttribute('target', '_blank');
-            downloadInfo.style.display = "block";
+            // Direct download link
+            if (data.download_url) {
+                window.open(data.download_url, '_blank');
+                downloadMessage.textContent = `Downloading ${data.platform} video...`;
+            } else {
+                downloadMessage.textContent = `${data.platform} video ready to download`;
+                downloadLink.href = data.url || data.download_url;
+                downloadLink.style.display = "inline-block";
+                downloadLink.setAttribute('target', '_blank');
+                downloadInfo.style.display = "block";
+            }
             
             input.placeholder = "Download ready! Paste another URL";
             
@@ -162,16 +167,6 @@ window.addEventListener("load", async () => {
     console.log("🚀 Video Downloader initialized");
     console.log(`📡 Backend URL: ${BACKEND_URL}`);
     
-    try {
-        const response = await fetch(`${BACKEND_URL}/test`);
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log("✅ Backend connected");
-            button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-            input.placeholder = "Paste video URL and click Download";
-        }
-    } catch (error) {
-        console.log("⚠️ Backend check failed");
-    }
+    button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+    input.placeholder = "Paste video URL and click Download";
 });
