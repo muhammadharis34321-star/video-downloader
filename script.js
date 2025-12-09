@@ -1,80 +1,84 @@
-// Elements
+// Simple Direct Video Downloader
 const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
 const toast = document.getElementById("toast");
 
-// SIMPLE DIRECT DOWNLOAD - NO BACKEND NEEDED
-function downloadVideo() {
-    const url = input.value.trim();
-    
-    if (!url) {
-        showToast("Please paste a video URL", "error");
-        return;
-    }
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening...';
-    
-    // Direct external services
-    let downloadUrl = "";
-    
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        downloadUrl = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
-        showToast("Opening YouTube downloader...", "info");
-    } 
-    else if (url.includes('tiktok.com')) {
-        downloadUrl = `https://snaptik.app/${encodeURIComponent(url)}`;
-        showToast("Opening TikTok downloader...", "info");
-    }
-    else if (url.includes('instagram.com')) {
-        downloadUrl = `https://snapinsta.app/${encodeURIComponent(url)}`;
-        showToast("Opening Instagram downloader...", "info");
-    }
-    else if (url.includes('facebook.com') || url.includes('fb.watch')) {
-        downloadUrl = `https://getfbot.com/${encodeURIComponent(url)}`;
-        showToast("Opening Facebook downloader...", "info");
-    }
-    else {
-        downloadUrl = `https://savetube.io/${encodeURIComponent(url)}`;
-        showToast("Opening video downloader...", "info");
-    }
-    
-    // Open in new tab
-    window.open(downloadUrl, '_blank');
-    
-    // Reset button
-    setTimeout(() => {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-        input.value = "";
-        input.placeholder = "Paste another URL";
-        showToast("Download page opened in new tab!", "success");
-    }, 2000);
-}
-
+// Toast function
 function showToast(message, type = "success") {
     toast.textContent = message;
     toast.className = "toast";
     toast.classList.add(type);
     toast.classList.add("show");
-    
-    setTimeout(() => {
-        toast.classList.remove("show");
-    }, 3000);
+    setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
-// Event Listeners
+// Get YouTube video ID
+function getYouTubeId(url) {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+}
+
+// Get TikTok video ID
+function getTikTokId(url) {
+    const match = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+    return match ? match[1] : null;
+}
+
+// Main download function
+async function downloadVideo() {
+    const url = input.value.trim();
+    
+    if (!url) {
+        showToast("Please paste video URL", "error");
+        return;
+    }
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+    
+    try {
+        // Send to backend
+        const response = await fetch("https://your-backend.com/download", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({url: url})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.download_url) {
+            // Create direct download link
+            const link = document.createElement('a');
+            link.href = data.download_url;
+            link.download = data.filename || "video.mp4";
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast("✅ Download started!", "success");
+        } else {
+            showToast("Download failed: " + (data.error || "Unknown error"), "error");
+        }
+        
+    } catch (error) {
+        showToast("Connection error. Try again.", "error");
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+        input.value = "";
+    }
+}
+
+// Event listeners
 button.addEventListener("click", downloadVideo);
 input.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-        downloadVideo();
-    }
+    if (e.key === "Enter") downloadVideo();
 });
 
 // Initialize
 window.addEventListener("load", () => {
-    console.log("✅ Simple Video Downloader Ready");
-    showToast("Paste any video URL and click Download", "success");
-    input.placeholder = "Paste YouTube, TikTok, Instagram, Facebook URL";
-    input.focus();
+    console.log("✅ Video Downloader Ready");
+    showToast("Paste video URL and click Download", "success");
 });
