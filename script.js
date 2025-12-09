@@ -8,14 +8,13 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// Backend URL - Change this to your actual backend URL
-// If running locally: http://localhost:5000
-// If on PythonAnywhere: https://yourusername.pythonanywhere.com
+// Backend URL - Change this according to your hosting
 const BACKEND_URL = "https://python22.pythonanywhere.com";
 
 let isDownloading = false;
+let currentDownloadUrl = "";
 
-// Toast function
+// Toast function - FIXED
 function showToast(message, type = "success") {
     toast.textContent = message;
     toast.className = "toast";
@@ -24,7 +23,7 @@ function showToast(message, type = "success") {
     
     setTimeout(() => {
         toast.classList.remove("show");
-    }, 3000);
+    }, 4000);
 }
 
 // Progress bar
@@ -63,7 +62,37 @@ function resetForm() {
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
 }
 
-// Main download function
+// Direct download function (for external links)
+function triggerDirectDownload(downloadUrl, filename, platform) {
+    try {
+        // Create temporary anchor
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename || `${platform}_${Date.now()}.mp4`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showToast(`✅ ${platform} download started!`, "success");
+        
+        // Show success message
+        downloadMessage.textContent = `${platform} video is downloading...`;
+        downloadInfo.style.display = "block";
+        
+        // Reset after 5 seconds
+        setTimeout(() => {
+            resetForm();
+        }, 5000);
+        
+        return true;
+    } catch (error) {
+        console.error("Direct download error:", error);
+        return false;
+    }
+}
+
+// Main download function - FIXED
 async function downloadVideo() {
     if (isDownloading) return;
     
@@ -91,8 +120,10 @@ async function downloadVideo() {
     animateProgress();
     
     try {
-        console.log(`🚀 Sending to backend: ${url}`);
-        console.log(`📡 Backend URL: ${BACKEND_URL}`);
+        console.log(`🚀 Processing: ${url}`);
+        
+        // Try backend first
+        showToast("Connecting to server...", "info");
         
         const response = await fetch(`${BACKEND_URL}/download`, {
             method: "POST",
@@ -104,98 +135,119 @@ async function downloadVideo() {
         
         completeProgress();
         
+        // Check if response is OK
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        console.log("📦 Backend response:", data);
+        console.log("📦 Server response:", data);
         
         if (data.success) {
-            showToast(`✅ ${data.platform} video ready!`, "success");
+            showToast(`✅ ${data.platform || 'Video'} found!`, "success");
             
             if (data.redirect) {
-                // Open external download page
+                // For redirect URLs (external services)
+                showToast("Opening download page...", "info");
                 window.open(data.url, '_blank');
-                downloadMessage.textContent = `Opened ${data.platform} download page in new tab`;
-                downloadInfo.style.display = "block";
                 
-                setTimeout(() => {
-                    resetForm();
-                }, 3000);
-            } else {
-                // Direct download
-                downloadMessage.textContent = `Downloading ${data.platform} video...`;
+                downloadMessage.textContent = `Download page opened for ${data.platform || 'video'}`;
                 downloadLink.href = data.url;
+                downloadLink.textContent = `Click here if download doesn't start`;
                 downloadLink.style.display = "inline-block";
                 downloadLink.setAttribute('target', '_blank');
-                downloadLink.setAttribute('download', `${data.platform}_${Date.now()}.mp4`);
                 downloadInfo.style.display = "block";
                 
-                // Auto-click after 1 second
-                setTimeout(() => {
-                    downloadLink.click();
-                }, 1000);
+            } else if (data.url) {
+                // For direct video URLs
+                showToast("Starting download...", "success");
                 
-                setTimeout(() => {
-                    resetForm();
-                }, 5000);
+                // Try direct download
+                const success = triggerDirectDownload(
+                    data.url, 
+                    `${data.platform || 'video'}_${Date.now()}.mp4`,
+                    data.platform || 'Video'
+                );
+                
+                if (!success) {
+                    // Fallback: show link
+                    downloadMessage.textContent = `Click to download ${data.platform || 'video'}`;
+                    downloadLink.href = data.url;
+                    downloadLink.textContent = `Download ${data.platform || 'Video'}`;
+                    downloadLink.style.display = "inline-block";
+                    downloadLink.setAttribute('download', `${data.platform || 'video'}_${Date.now()}.mp4`);
+                    downloadInfo.style.display = "block";
+                }
+                
+            } else {
+                // If no URL but success
+                showToast("Video processed successfully", "success");
+                downloadMessage.textContent = "Video is ready!";
+                downloadInfo.style.display = "block";
             }
             
-            input.placeholder = "Download ready! Paste another URL";
+            // Auto reset after 10 seconds
+            setTimeout(() => {
+                if (isDownloading) {
+                    resetForm();
+                }
+            }, 10000);
             
         } else {
-            throw new Error(data.error || "Download failed");
+            // Server returned error
+            throw new Error(data.error || "Server could not process video");
         }
         
     } catch (error) {
-        console.error("❌ Error:", error);
+        console.error("❌ Main error:", error);
         completeProgress();
         
-        let errorMessage = "Download failed. ";
-        if (error.message.includes("Failed to fetch")) {
-            errorMessage = "Cannot connect to server. Check your internet.";
+        // Use fallback external services
+        showToast("Using alternative download service...", "info");
+        
+        let fallbackUrl = "";
+        let platform = "Video";
+        
+        // Determine platform and corresponding download service
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            platform = "YouTube";
+            fallbackUrl = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
+        } else if (url.includes('tiktok.com')) {
+            platform = "TikTok";
+            fallbackUrl = `https://snaptik.app/${encodeURIComponent(url)}`;
+        } else if (url.includes('instagram.com')) {
+            platform = "Instagram";
+            fallbackUrl = `https://snapinsta.app/${encodeURIComponent(url)}`;
+        } else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+            platform = "Facebook";
+            fallbackUrl = `https://getfbot.com/${encodeURIComponent(url)}`;
         } else {
-            errorMessage += error.message;
+            fallbackUrl = `https://savetube.io/${encodeURIComponent(url)}`;
         }
         
-        showToast(errorMessage, "error");
-        input.placeholder = "Download failed. Try again.";
-        input.style.border = "2px solid #f44336";
+        // Show fallback message
+        downloadMessage.textContent = `Redirecting to ${platform} download page...`;
+        downloadLink.href = fallbackUrl;
+        downloadLink.textContent = `Click here to download ${platform} video`;
+        downloadLink.style.display = "inline-block";
+        downloadLink.setAttribute('target', '_blank');
+        downloadInfo.style.display = "block";
         
-        // Fallback: Use external services
+        // Auto-open after 1 second
         setTimeout(() => {
-            showToast("Trying alternative method...", "info");
-            
-            let fallbackUrl = "";
-            if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                fallbackUrl = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
-            } else if (url.includes('tiktok.com')) {
-                fallbackUrl = `https://snaptik.app/${encodeURIComponent(url)}`;
-            } else if (url.includes('instagram.com')) {
-                fallbackUrl = `https://snapinsta.app/${encodeURIComponent(url)}`;
-            } else if (url.includes('facebook.com')) {
-                fallbackUrl = `https://getfbot.com/${encodeURIComponent(url)}`;
-            } else {
-                fallbackUrl = `https://savetube.io/${encodeURIComponent(url)}`;
-            }
-            
-            downloadMessage.textContent = "Redirecting to download page...";
-            downloadLink.href = fallbackUrl;
-            downloadLink.style.display = "inline-block";
-            downloadLink.setAttribute('target', '_blank');
-            downloadInfo.style.display = "block";
-            
-            // Auto open
-            setTimeout(() => {
-                window.open(fallbackUrl, '_blank');
-            }, 1000);
-            
-            setTimeout(() => {
-                resetForm();
-            }, 5000);
-        }, 2000);
+            window.open(fallbackUrl, '_blank');
+            showToast(`Opened ${platform} download page`, "success");
+        }, 1000);
+        
+        // Reset after 8 seconds
+        setTimeout(() => {
+            resetForm();
+        }, 8000);
         
     } finally {
         setTimeout(() => {
             isDownloading = false;
-        }, 3000);
+        }, 2000);
     }
 }
 
@@ -208,47 +260,59 @@ input.addEventListener("keypress", (e) => {
     }
 });
 
-// Auto-select on focus
-input.addEventListener("focus", function() {
+// Auto-select text when clicked
+input.addEventListener("click", function() {
     this.select();
 });
 
-// Initialize
+// Handle paste event
+input.addEventListener("paste", (e) => {
+    setTimeout(() => {
+        const pastedText = input.value.trim();
+        if (pastedText && (pastedText.includes('youtube') || pastedText.includes('tiktok') || 
+            pastedText.includes('instagram') || pastedText.includes('facebook'))) {
+            showToast("URL detected! Click Download", "info");
+        }
+    }, 100);
+});
+
+// Initialize on page load
 window.addEventListener("load", async () => {
-    console.log("🚀 Video Downloader initialized");
-    console.log(`📡 Backend URL: ${BACKEND_URL}`);
+    console.log("🎬 Video Downloader v2.0 Loaded");
+    console.log(`🔗 Backend: ${BACKEND_URL}`);
     
-    // Check backend status
+    // Set initial UI state
+    button.innerHTML = '<i class="fas fa-download"></i> Download Video';
+    input.placeholder = "Paste YouTube, TikTok, Instagram, or Facebook URL";
+    input.focus();
+    
+    // Test backend connection
     try {
-        const response = await fetch(`${BACKEND_URL}/status`);
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log("✅ Backend connected");
-            showToast("Video Downloader Ready!", "success");
+        showToast("Checking connection...", "info");
+        const response = await fetch(`${BACKEND_URL}/status`, { timeout: 5000 });
+        if (response.ok) {
+            showToast("✅ Connected to server!", "success");
+        } else {
+            showToast("⚠️ Using fallback services", "info");
         }
     } catch (error) {
-        console.log("⚠️ Backend check failed, using fallback methods");
-        showToast("Using external download services", "info");
+        console.log("Backend not reachable, using external services");
+        showToast("Ready! Paste video URL", "success");
     }
     
-    button.innerHTML = '<i class="fas fa-download"></i> Download Video';
-    input.placeholder = "Paste video URL and click Download";
-    
-    // Example URLs for testing (optional)
+    // Add example URLs cycling (optional)
     const examples = [
-        "https://youtu.be/rod6AniVIw0",
-        "https://www.tiktok.com/@example/video/123456789",
-        "https://www.instagram.com/reel/ABC123/",
-        "https://www.facebook.com/watch/?v=123456789"
+        "https://youtu.be/dQw4w9WgXcQ",
+        "https://www.tiktok.com/@example",
+        "https://www.instagram.com/reel/example",
+        "https://facebook.com/watch/?v=example"
     ];
     
-    // Cycle through examples (optional feature)
     let exampleIndex = 0;
     setInterval(() => {
-        if (!isDownloading && !input.value) {
+        if (!input.value && !isDownloading) {
             input.placeholder = `Example: ${examples[exampleIndex]}`;
             exampleIndex = (exampleIndex + 1) % examples.length;
         }
-    }, 3000);
+    }, 4000);
 });
