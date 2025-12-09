@@ -3,6 +3,9 @@ const input = document.querySelector(".hero-input");
 const button = document.getElementById("download-btn");
 const toast = document.getElementById("toast");
 
+// ✅ TUMHARA BACKEND
+const BACKEND_URL = "https://python22.pythonanywhere.com";
+
 // Toast function
 function showToast(message, type = "success") {
     toast.textContent = message;
