@@ -8,9 +8,6 @@ const downloadInfo = document.getElementById("downloadInfo");
 const downloadMessage = document.getElementById("downloadMessage");
 const downloadLink = document.getElementById("downloadLink");
 
-// ✅ NEW CLOUDFLARE WORKER BACKEND
-const BACKEND_URL = "https://your-worker-name.your-account.workers.dev";
-
 let isDownloading = false;
 
 // Toast function
@@ -48,7 +45,6 @@ function completeProgress() {
     }, 500);
 }
 
-// Reset form
 function resetForm() {
     input.style.border = "2px solid #ddd";
     input.style.color = "#333";
@@ -61,7 +57,26 @@ function resetForm() {
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
 }
 
-// Main download function
+// YouTube video ID extract
+function getYouTubeId(url) {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+}
+
+// TikTok video ID extract
+function getTikTokId(url) {
+    const match = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+    return match ? match[1] : null;
+}
+
+// Instagram video ID extract
+function getInstagramId(url) {
+    const match = url.match(/instagram\.com\/[p|reel|tv]\/([\w-]+)/);
+    return match ? match[1] : null;
+}
+
+// Main download function - DIRECT API CALLS
 async function downloadVideo() {
     if (isDownloading) return;
     
@@ -89,67 +104,118 @@ async function downloadVideo() {
     animateProgress();
     
     try {
-        console.log(`🚀 Sending to backend: ${url}`);
+        console.log(`🚀 Processing URL: ${url}`);
         
-        const response = await fetch(`${BACKEND_URL}/download`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ url: url })
-        });
+        let downloadUrl = null;
+        let videoTitle = "Video";
+        let platform = "Unknown";
         
-        completeProgress();
-        
-        const data = await response.json();
-        console.log("📦 Backend response:", data);
-        
-        if (data.success) {
-            showToast(`✅ ${data.platform} video ready!`, "success");
-            
-            // Direct download link
-            if (data.download_url) {
-                window.open(data.download_url, '_blank');
-                downloadMessage.textContent = `Downloading ${data.platform} video...`;
-            } else {
-                downloadMessage.textContent = `${data.platform} video ready to download`;
-                downloadLink.href = data.url || data.download_url;
-                downloadLink.style.display = "inline-block";
-                downloadLink.setAttribute('target', '_blank');
-                downloadInfo.style.display = "block";
+        // YouTube
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            platform = "YouTube";
+            const videoId = getYouTubeId(url);
+            if (videoId) {
+                // Using y2mate API
+                downloadUrl = `https://y2mate.guru/api/convert/${videoId}`;
+                videoTitle = "YouTube Video";
             }
+        }
+        // TikTok
+        else if (url.includes('tiktok.com')) {
+            platform = "TikTok";
+            // Using tikmate API
+            const apiUrl = "https://www.tikwm.com/api/";
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: `url=${encodeURIComponent(url)}`
+            });
+            
+            const data = await response.json();
+            if (data.data && data.data.play) {
+                downloadUrl = data.data.play;
+                videoTitle = data.data.title || "TikTok Video";
+            }
+        }
+        // Instagram
+        else if (url.includes('instagram.com')) {
+            platform = "Instagram";
+            // Using savefrom API
+            downloadUrl = `https://api.savefrom.app/api/convert?url=${encodeURIComponent(url)}`;
+        }
+        // Facebook
+        else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+            platform = "Facebook";
+            // Using fbdown API
+            downloadUrl = `https://fbdownloader.net/api/ajaxSearch?url=${encodeURIComponent(url)}`;
+        }
+        
+        if (downloadUrl) {
+            completeProgress();
+            
+            showToast(`✅ ${platform} video ready!`, "success");
+            
+            // Create download link
+            downloadMessage.textContent = `Click to download ${platform} video`;
+            downloadLink.href = downloadUrl;
+            downloadLink.style.display = "inline-block";
+            downloadLink.setAttribute('target', '_blank');
+            downloadLink.setAttribute('download', `${platform}_${Date.now()}.mp4`);
+            downloadInfo.style.display = "block";
             
             input.placeholder = "Download ready! Paste another URL";
             
+            // Auto click download after 2 seconds
             setTimeout(() => {
-                if (isDownloading) {
-                    resetForm();
-                }
-            }, 15000);
+                downloadLink.click();
+            }, 2000);
             
         } else {
-            throw new Error(data.error || "Download failed");
+            throw new Error(`Unsupported URL or service down`);
         }
         
     } catch (error) {
         console.error("❌ Error:", error);
         completeProgress();
         
-        let errorMessage = "Download failed. ";
-        if (error.message.includes("Failed to fetch")) {
-            errorMessage = "Cannot connect to server. Check your internet.";
-        } else {
-            errorMessage += error.message;
-        }
+        // Fallback method
+        showToast("Using alternative method...", "info");
         
-        showToast(errorMessage, "error");
-        input.placeholder = "Download failed. Try again.";
-        input.style.border = "2px solid #f44336";
-        
+        // Try alternative method
         setTimeout(() => {
-            resetForm();
-        }, 5000);
+            try {
+                // Direct download via iframe
+                const tempFrame = document.createElement('iframe');
+                tempFrame.style.display = 'none';
+                tempFrame.src = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
+                document.body.appendChild(tempFrame);
+                
+                downloadMessage.textContent = "Redirecting to download page...";
+                downloadLink.href = `https://ssyoutube.com/en105DL/${encodeURIComponent(url)}`;
+                downloadLink.style.display = "inline-block";
+                downloadLink.setAttribute('target', '_blank');
+                downloadInfo.style.display = "block";
+                
+                showToast("Redirecting to download page", "success");
+                
+            } catch (fallbackError) {
+                showToast("Failed to download. Try savetube.io", "error");
+                downloadMessage.textContent = "Try: savetube.io";
+                downloadLink.href = `https://savetube.io/${encodeURIComponent(url)}`;
+                downloadLink.style.display = "inline-block";
+                downloadLink.setAttribute('target', '_blank');
+                downloadInfo.style.display = "block";
+            }
+            
+            setTimeout(() => {
+                resetForm();
+            }, 10000);
+        }, 2000);
         
     } finally {
-        isDownloading = false;
+        setTimeout(() => {
+            isDownloading = false;
+        }, 3000);
     }
 }
 
@@ -162,11 +228,32 @@ input.addEventListener("keypress", (e) => {
     }
 });
 
+// Add copy button functionality
+input.addEventListener('focus', function() {
+    this.select();
+});
+
+// Add paste listener
+input.addEventListener('paste', (e) => {
+    setTimeout(() => {
+        if (input.value.trim()) {
+            showToast("URL pasted! Click Download", "info");
+        }
+    }, 100);
+});
+
 // Initialize
-window.addEventListener("load", async () => {
-    console.log("🚀 Video Downloader initialized");
-    console.log(`📡 Backend URL: ${BACKEND_URL}`);
-    
+window.addEventListener("load", () => {
+    console.log("🚀 Video Downloader Ready");
     button.innerHTML = '<i class="fas fa-download"></i> Download Video';
     input.placeholder = "Paste video URL and click Download";
+    
+    // Add sample URLs for testing
+    input.value = "";
+    input.focus();
+    
+    showToast("Welcome! Paste any video URL", "success");
 });
+
+// Add help tooltip
+input.setAttribute('title', 'Paste TikTok, YouTube, Instagram, or Facebook URL');
